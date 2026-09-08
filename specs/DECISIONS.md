@@ -1,0 +1,116 @@
+# Architecture Decision Records
+
+## ADR-001 — Next.js (App Router) + TypeScript strict
+**Entscheidung:** Next.js mit App Router, React 19, TypeScript `strict`, Tailwind CSS v4.
+**Alternativen:** Vite+Express (mehr Boilerplate), Remix (kleineres Ökosystem für RSC/Streaming).
+**Begründung:** Ein Deployment-Artefakt für UI und API, natives Streaming über Route Handlers, große Toolchain-Reife.
+**Auswirkung bei Änderung:** Betrifft nur `app/` und `components/`; `lib/` ist framework-unabhängig.
+
+## ADR-002 — Persistenz: SQLite über `node:sqlite`, Repository-Interface
+**Entscheidung:** Datenzugriff über ein `Repositories`-Interface; MVP-Implementierung mit dem in Node
+eingebauten `node:sqlite` und SQL-Migrationsdateien. Kein ORM, keine nativen Abhängigkeiten.
+**Alternativen:** Postgres+Drizzle (Default des Auftrags), better-sqlite3.
+**Begründung:** Zero-Setup und zero Build-Risiko; die App ist ohne Infrastruktur lauffähig und testbar,
+was für die MVP-Abnahme entscheidend ist. Das Interface erlaubt einen Postgres-Adapter ohne Logikänderung.
+**Auswirkung bei Änderung:** Neuer Adapter unter `lib/db/adapters/`, Migrationsdialekt anpassen. Kein Aufrufer betroffen.
+
+## ADR-003 — Streaming über SSE mit persistierten Events und Polling-Reader
+**Entscheidung:** Der Orchestrator schreibt Events in die Tabelle `run_events`; der SSE-Endpunkt liest
+sie ab `seq > after` und pollt im 120-ms-Takt. `Last-Event-ID` wird unterstützt.
+**Alternativen:** In-Memory-Bus (kein Replay), WebSockets (mehr Infrastruktur).
+**Begründung:** Replay nach Reload, Resume nach Verbindungsabbruch und Debugbarkeit ohne zusätzliche Infrastruktur.
+**Auswirkung bei Änderung:** Ein In-Memory-Bus kann als Beschleunigung ergänzt werden; das Protokoll bleibt gleich.
+
+## ADR-004 — Eigene Tool-Schicht statt ausschließlich gehosteter Agent-Tools
+**Entscheidung:** Suche, Seitenabruf und Extraktion laufen als eigene Tools im Backend.
+**Alternativen:** Vollständig gehostete Tool-Ausführung beim Modellanbieter.
+**Begründung:** Nur so entstehen die geforderten sichtbaren Execution-Trace-Events, prüfbare Quellen,
+Kostenkontrolle und Provider-Austauschbarkeit.
+**Auswirkung bei Änderung:** Der gehostete Web-Search-Pfad bleibt als `SearchProvider`-Implementierung nutzbar.
+
+## ADR-005 — Demo-Modus mit deterministischen Fixture-Providern
+**Entscheidung:** Ohne `OPENAI_API_KEY` startet die App im Demo-Modus: `FixtureLLMProvider`,
+`FixtureSearchProvider` und lokal ausgelieferte Fixture-Seiten unter `/api/demo/pages/*`.
+**Alternativen:** App verweigert den Start ohne Key.
+**Begründung:** Die gesamte Pipeline (Router → Plan → Suche → Lesen → Extraktion → Vergleich → Synthese →
+Citations → Streaming-UI) ist damit ohne Key und ohne Netzwerk deterministisch ausführbar und automatisiert testbar.
+**Sicherheitsauflage:** Der SSRF-Guard erlaubt Localhost-Ziele ausschließlich, wenn `DEMO_MODE` aktiv ist.
+
+## ADR-006 — Run-Ausführung im Node-Prozess, Zustand nach jedem Schritt persistiert
+**Entscheidung:** `POST /api/runs` startet die Ausführung asynchron im selben Prozess und antwortet sofort
+mit `runId`. Nach jedem Schritt werden State und Events geschrieben.
+**Alternativen:** Job-Queue (Inngest/Redis) ab Tag 1.
+**Begründung:** Ausreichend für Runs < 180 s und einen Prozess; Persistenz erhält Nachvollziehbarkeit.
+**Auswirkung bei Änderung:** Spec 45 ersetzt den Starter durch einen Worker; die Orchestrator-API bleibt gleich.
+
+## ADR-007 — Tests: Vitest + Fixture-Provider, HTTP-Smoke-Test statt Browser-E2E im MVP
+**Entscheidung:** Unit- und Integrationstests mit Vitest gegen die Route-Handler und den Orchestrator;
+ein Smoke-Test fährt den Produktionsbuild hoch und prüft den kompletten Research-Flow über HTTP/SSE.
+**Alternativen:** Playwright ab Tag 1.
+**Begründung:** Deckt die Kernrisiken (Pipeline, Streaming, Citations) ohne 300 MB Browser-Download ab.
+**Auswirkung bei Änderung:** Playwright ergänzt Spec 42 in Phase 6/8.
+
+## ADR-008 — Zod als einzige Schema-Quelle
+**Entscheidung:** Tool-Parameter, API-Payloads, Structured Outputs und Events werden einmal in Zod
+definiert; TypeScript-Typen werden abgeleitet, JSON-Schemas für das Modell generiert.
+**Begründung:** Verhindert Divergenz zwischen Modellvertrag, API-Vertrag und DB-Vertrag.
+
+## ADR-009 — Migrationen als TypeScript-Modul statt loser .sql-Dateien
+**Entscheidung:** Die Migrations-SQL liegt in `lib/db/migrations.ts` als Array `{ name, sql }`.
+**Alternative:** `.sql`-Dateien zur Laufzeit über `fs` lesen (ursprünglicher Plan in Spec 04).
+**Begründung:** Next.js bündelt Servercode; ein Laufzeit-`fs`-Zugriff auf Projektdateien ist je nach
+Build- und Deploymentvariante nicht garantiert. Das TS-Modul ist immer Teil des Bundles.
+**Auswirkung bei Änderung:** Ein Postgres-Adapter bringt seine eigene Migrationsliste im selben Format mit.
+
+## ADR-010 — Fixture-Route unter `/api/demo/pages/[slug]`
+**Entscheidung:** Die Demo-Seiten werden unter `/api/demo/pages/[slug]` ausgeliefert (ursprünglich `/api/__fixtures/...`).
+**Begründung:** Verzeichnisse mit `_`-Präfix sind im Next.js App Router private Ordner und erzeugen keine Route.
+**Auswirkung bei Änderung:** Nur `fixtureUrl()` in `lib/fixtures/pages.ts` und der Testserver.
+
+## ADR-011 — Abbruch zusätzlich persistent über `runs.cancel_requested`
+**Entscheidung:** `POST /api/runs/:id/cancel` setzt ein persistentes Flag; der Orchestrator prüft es vor
+jedem Schritt und über einen 250-ms-Watcher, zusätzlich zur In-Process-Registry.
+**Alternative:** Nur die In-Process-`Map` (ursprünglicher Plan).
+**Begründung:** Der Smoke-Test zeigte, dass Next.js Route-Handler in getrennten Modulinstanzen laufen
+können — die Registry des Cancel-Handlers war dann leer und der Abbruch wirkungslos.
+**Auswirkung bei Änderung:** Spec 45 (Worker-Betrieb) baut auf demselben Flag auf.
+
+## ADR-012 — Zweiter LLM-Anbieter über OpenAI-kompatible Chat Completions
+**Entscheidung:** Neben `OpenAIProvider` (Responses API) gibt es `OpenAICompatibleProvider`, der gegen
+`/chat/completions` spricht. Damit sind NVIDIA NIM, Groq, Together, OpenRouter und lokale Server
+(Ollama, vLLM) nutzbar. Auswahl über `LLM_PROVIDER`; `auto` leitet aus den vorhandenen Schlüsseln ab.
+**Alternativen:** Nur OpenAI (blockiert bei fehlendem Guthaben); ein Adapter-Framework (Overhead).
+**Begründung:** Die Architektur sah Austauschbarkeit vor (Spec 02, FR-02-04); der Bedarf entstand real,
+als das OpenAI-Konto ohne Guthaben war. Der neue Provider nutzt nur `fetch`, also keine weitere Abhängigkeit.
+**Einschränkungen, ausdrücklich dokumentiert:**
+- Structured Outputs laufen bei NVIDIA über `response_format: json_object` plus Schema-Hinweis im Prompt,
+  mit Fallback-Reparatur — nicht über `json_schema` mit `strict`. Etwas höhere Fehlerquote als bei OpenAI.
+- Die **gehostete Websuche gibt es nur bei OpenAI**. Mit NVIDIA braucht die Recherche einen
+  `BRAVE_API_KEY` oder `TAVILY_API_KEY`; ohne einen davon fällt die Suche auf die Demo-Quellen zurück.
+- Kostenschätzung: für unbekannte Modelle greift ein Fallback-Preis; bei kostenlosen Kontingenten
+  sind die ausgewiesenen Kosten daher nur ein Richtwert.
+**Auswirkung bei Änderung:** Weitere Anbieter benötigen nur einen Eintrag in `getLLMProvider()`.
+
+## ADR-013 — Keine simulierten Antworten im Anwendungscode (ersetzt ADR-005)
+**Entscheidung:** Der Demo-Modus und alle Fixture-Provider werden aus der Anwendung entfernt. Ohne
+konfigurierten Anbieter antwortet die App nicht, sondern verlangt eine Einrichtung
+(`LLM_NOT_CONFIGURED`, `SEARCH_NOT_CONFIGURED`).
+**Alternative:** Demo-Modus beibehalten (ADR-005).
+**Begründung:** Der Demo-Modus wurde wiederholt für einen Fehler gehalten: Die App schien zu antworten,
+lieferte aber Vorlagentexte, und bei Rechercheanfragen zeitweise sogar fachfremde Quellen. Eine
+Anwendung, die Inhalte erfinden kann, untergräbt genau das Versprechen dieses Produkts —
+nachvollziehbare, belegte Antworten.
+**Auswirkung:** `lib/llm/fixture.ts`, `lib/search/fixture.ts`, `lib/fixtures/` und `/api/demo/*` entfallen;
+Spec 47 wurde von „Demo Mode" zu „Provider Setup" umgeschrieben. Der SSRF-Guard erlaubt Loopback nur
+noch über den ausdrücklichen Testschalter `ALLOW_LOOPBACK_FETCH`.
+
+## ADR-014 — Tests laufen gegen einen lokalen HTTP-Stub statt gegen Fakes im Produktcode
+**Entscheidung:** `tests/doubles/stub-server.ts` implementiert die echten Protokolle
+(`/v1/chat/completions`, `/v1/models`, Tavily-Suche, Testseiten). Die Testsuite richtet
+`LLM_BASE_URL` und `TAVILY_BASE_URL` darauf aus.
+**Alternativen:** Injektionsschalter im Produktcode; Tests gegen echte Anbieter.
+**Begründung:** Die Anwendung durchläuft im Test denselben Provider-Code wie in Produktion — inklusive
+HTTP, Streaming, Fehlerabbildung und SSRF-Guard. Gleichzeitig bleibt die Suite offline, deterministisch
+und ohne Schlüssel lauffähig (Spec 42, FR-42-01).
+**Nebeneffekt:** `BRAVE_BASE_URL` und `TAVILY_BASE_URL` sind jetzt konfigurierbar, was auch Proxys und
+Self-Hosting ermöglicht.
