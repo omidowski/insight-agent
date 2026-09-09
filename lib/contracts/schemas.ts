@@ -45,15 +45,26 @@ export const queryOutputSchema = z.object({
 });
 export type QueryOutput = z.infer<typeof queryOutputSchema>;
 
+export const extractionItemSchema = z.object({
+  claimKey: z.string().max(120),
+  label: z.string().max(160),
+  value: z.string().max(300),
+  excerpt: z.string().max(600),
+  confidence: z.number().min(0).max(1),
+});
+
+/**
+ * Die Auswertung einer Quelle ist eine Ernte, kein Vertrag: Ein unvollständiger Eintrag
+ * darf die übrigen nicht mitreißen. Beobachtet bei NVIDIA-Nemotron — sechs von sieben
+ * Angaben waren vollständig, die siebte ohne `value` verwarf alle sieben. Fehlerhafte
+ * Einträge werden verworfen, die brauchbaren bleiben; jedes Zitat wird ohnehin danach
+ * gegen den Quelltext geprüft.
+ */
 export const extractionOutputSchema = z.object({
-  items: z.array(
-    z.object({
-      claimKey: z.string().max(120),
-      label: z.string().max(160),
-      value: z.string().max(300),
-      excerpt: z.string().max(600),
-      confidence: z.number().min(0).max(1),
-    }),
+  items: z.preprocess(
+    (value) =>
+      Array.isArray(value) ? value.filter((entry) => extractionItemSchema.safeParse(entry).success) : value,
+    z.array(extractionItemSchema),
   ),
   summary: z.string().max(300),
 });

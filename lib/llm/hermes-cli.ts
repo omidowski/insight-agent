@@ -18,6 +18,7 @@ import { getConfig } from '@/lib/config/env';
 import { appError, AppErrorException } from '@/lib/util/errors';
 import { estimateTokens } from '@/lib/util/tokens';
 import { toStrictJsonSchema } from '@/lib/contracts/json-schema';
+import { parseStructured, schemaInstruction } from './json-output';
 import { costMicroUsd } from './pricing';
 import { renderInput } from './render';
 import { logger } from '@/lib/util/logger';
@@ -205,19 +206,9 @@ export class HermesCliProvider implements LLMProvider {
   async generateObject<T>(req: ObjectRequest<T>): Promise<T> {
     const model = this.modelFor(req);
     const schema = toStrictJsonSchema(req.schema as unknown as z.ZodTypeAny);
-    const instruction =
-      'Antworte ausschließlich mit gültigem JSON nach diesem Schema — ohne Codeblock, ohne Vor- oder Nachtext:\n' +
-      JSON.stringify(schema);
+    const instruction = `${schemaInstruction(schema)}\nKein Vor- oder Nachtext.`;
 
-    const parse = (raw: string): T => {
-      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-      const start = cleaned.indexOf('{');
-      const end = cleaned.lastIndexOf('}');
-      const candidate = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-      const parsed = req.schema.safeParse(JSON.parse(candidate));
-      if (!parsed.success) throw new Error(parsed.error.message);
-      return parsed.data;
-    };
+    const parse = (raw: string): T => parseStructured(raw, req.schema);
 
     const first = this.buildPrompt(req, instruction);
     const firstResult = await this.run(first, model, req.signal);

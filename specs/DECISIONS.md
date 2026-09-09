@@ -180,3 +180,26 @@ Aufruf. Ein Research-Run macht viele Aufrufe und lief dadurch zuverlässig ins Z
 Denkschritt verzichtbar; bei der Schlussantwort kann die Qualität sinken. Wer das nicht will,
 setzt `LLM_DISABLE_THINKING=off`. Andere Anbieter kennen den Schalter nicht — deshalb `auto`.
 **Auswirkung bei Änderung:** Nur `thinkingOff()` in `lib/llm/openai-compatible.ts`.
+
+## ADR-019 — Nachsichtige Auswertung strukturierter Modellantworten
+**Datum:** 2026-09-09 · **Status:** angenommen
+**Kontext:** Beim Auswerten der Quellen scheiterten alle acht Aufrufe mit `LLM_BAD_OUTPUT`; die
+Antwort enthielt Platzhalter statt Werten. Zwei Ursachen, beide reproduziert:
+1. **Schema-Echo.** Nemotron gab das JSON-Schema zurück und legte die Daten in `properties` ab:
+   `{type:"object", properties:{items:[…], summary:"…"}, required:[…]}`. Die Daten selbst waren
+   vollständig und korrekt — nur eine Ebene zu tief.
+2. **Ein unvollständiger Eintrag verwarf alle.** Sechs von sieben Angaben waren vollständig, der
+   siebten fehlte `value`. Das strenge Schema ließ damit auch die sechs guten fallen.
+**Entscheidung:**
+- `lib/llm/json-output.ts` bündelt die Auswertung für beide Anbieterwege. `parseStructured` prüft
+  zuerst unverändert und entpackt erst bei Misserfolg ein erkanntes Schema-Echo.
+- `schemaInstruction()` nennt die erwarteten Schlüssel der obersten Ebene und untersagt ausdrücklich
+  die Schema-Schlüssel in der Antwort. Damit tritt das Echo am echten Modell nicht mehr auf.
+- `extractionOutputSchema` verwirft einzelne fehlerhafte Einträge und behält die brauchbaren. Die
+  Auswertung ist eine Ernte, kein Vertrag; jedes Zitat wird ohnehin danach gegen den Quelltext geprüft.
+- `ObjectRequest.schema` ist jetzt `z.ZodType<T, z.ZodTypeDef, unknown>` — die Eingabe ist geparstes
+  JSON und damit tatsächlich unbekannt. Erst dadurch sind aufräumende Schemata typsicher möglich.
+**Abgrenzung:** Repariert werden nur Muster, bei denen die Daten nachweislich vollständig vorliegen
+und falsch verpackt sind. Fehlt Inhalt, bleibt es ein Fehler — geraten wird nichts.
+**Nachweis:** Derselbe Lauf, der zuvor 0 Belege lieferte, speichert jetzt 6 Belege und 5 Citations.
+**Auswirkung bei Änderung:** `lib/llm/json-output.ts` und `extractionOutputSchema`.

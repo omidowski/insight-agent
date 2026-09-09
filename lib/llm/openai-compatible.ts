@@ -9,6 +9,7 @@ import { getConfig } from '@/lib/config/env';
 import { appError, AppErrorException, withRetry, toAppError } from '@/lib/util/errors';
 import { estimateTokens } from '@/lib/util/tokens';
 import { toStrictJsonSchema } from '@/lib/contracts/json-schema';
+import { parseStructured, schemaInstruction } from './json-output';
 import { costMicroUsd } from './pricing';
 import { renderInput } from './render';
 import { logger } from '@/lib/util/logger';
@@ -262,9 +263,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       return {};
     };
 
-    const schemaHint =
-      `Antworte ausschließlich mit gültigem JSON nach diesem Schema, ohne Markdown-Codeblock:\n` +
-      JSON.stringify(jsonSchema);
+    const schemaHint = schemaInstruction(jsonSchema);
 
     const call = async (mode: typeof this.options.structuredOutput, repairHint?: string): Promise<string> => {
       const response = await this.post(
@@ -285,15 +284,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       return data.choices?.[0]?.message?.content ?? '';
     };
 
-    const parse = (raw: string): T => {
-      const cleaned = raw.trim().replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '');
-      const start = cleaned.indexOf('{');
-      const end = cleaned.lastIndexOf('}');
-      const candidate = start >= 0 && end > start ? cleaned.slice(start, end + 1) : cleaned;
-      const parsed = req.schema.safeParse(JSON.parse(candidate));
-      if (!parsed.success) throw new Error(parsed.error.message);
-      return parsed.data;
-    };
+    const parse = (raw: string): T => parseStructured(raw, req.schema);
 
     let mode = this.options.structuredOutput;
     let first: string;

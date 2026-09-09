@@ -22,7 +22,12 @@ export interface TextRequest {
 }
 
 export interface ObjectRequest<T> extends TextRequest {
-  schema: z.ZodType<T>;
+  /**
+   * Die Eingabe ist geparstes JSON und damit tatsächlich unbekannt — deshalb `unknown`
+   * als Eingabetyp. Das erlaubt Schemata, die beim Prüfen aufräumen (z. B. `z.preprocess`),
+   * ohne dass der Ergebnistyp zu `unknown` verwässert.
+   */
+  schema: z.ZodType<T, z.ZodTypeDef, unknown>;
   schemaName: string;
 }
 
