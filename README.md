@@ -1,4 +1,4 @@
-# Insight Agent — autonomer AI Research Agent
+# Autonomous Intelligence — autonomer AI Research Agent
 
 Web-App mit einem autonomen Recherche-Agenten: Der Nutzer chattet, der Agent erkennt selbst, ob eine
 Recherche nötig ist, plant sie, sucht im Web, liest Quellen, vergleicht Angaben, erkennt Widersprüche
@@ -19,18 +19,61 @@ anschließend mit `npm run check:llm`.
 
 **Die Anwendung erzeugt keine simulierten Antworten.** Ohne konfigurierten Anbieter zeigt sie einen
 Einrichtungshinweis und sperrt das Senden (ADR-013). Für Recherche wird zusätzlich ein Suchanbieter
-benötigt: `BRAVE_API_KEY` oder `TAVILY_API_KEY` — außer bei OpenAI, dessen gehostete Websuche genutzt wird.
+benötigt: `BRAVE_API_KEY` oder `TAVILY_API_KEY`, die gehostete Suche von OpenAI — oder die
+schlüsselfreie Suche über Hermes (ADR-016).
 
 ## Anbieter und Modelle
 
 | Anbieter | Konfiguration | Websuche |
 |---|---|---|
 | OpenAI | `OPENAI_API_KEY` | gehostet, kein Zusatzschlüssel nötig |
-| NVIDIA NIM | `NVIDIA_API_KEY` | benötigt Brave oder Tavily |
-| Beliebig OpenAI-kompatibel (Groq, Together, OpenRouter, Ollama, vLLM) | `LLM_BASE_URL` + `LLM_API_KEY` | benötigt Brave oder Tavily |
+| NVIDIA NIM | `NVIDIA_API_KEY` | Brave, Tavily oder Hermes |
+| Beliebig OpenAI-kompatibel (Groq, Together, OpenRouter, Ollama, vLLM) | `LLM_BASE_URL` + `LLM_API_KEY` | Brave, Tavily oder Hermes |
+| Hermes-Agent-CLI (ADR-015) | `LLM_PROVIDER=hermes`, Schlüssel in `~/.hermes/.env` | Brave, Tavily oder Hermes |
+
+**NVIDIA über Hermes:** `npm run set-key -- --hermes` legt den Schlüssel in Hermes ab und stellt die App
+auf `LLM_PROVIDER=hermes` um. Die Anwendung selbst hält dann keinen Schlüssel. Preis dafür: kein echtes
+Streaming, geschätzte Kosten und ein Prozessstart je Modellaufruf — Details in ADR-015.
 
 Das Modell wählst du in der Kopfzeile der App: Empfehlungen zuerst, darunter alle Modelle, die dein
 Konto tatsächlich freigeschaltet hat (`GET /api/models`). Die Wahl gilt je Run und bleibt gespeichert.
+
+## Websuche ohne Schlüssel (ADR-016)
+
+Ist Hermes installiert, nutzt die App dessen Werkzeugsatz `web`. Der Rückgriff `ddgs` (DuckDuckGo)
+braucht kein Konto. Einmalig einrichten:
+
+```bash
+VIRTUAL_ENV="$HOME/.hermes/hermes-agent/venv" uv pip install ddgs
+```
+
+Dann in `.env.local`:
+
+```
+SEARCH_PROVIDER=hermes
+HERMES_SEARCH_BACKEND=ddgs
+```
+
+`SEARCH_PROVIDER=auto` greift ebenfalls auf Hermes zurück, wenn kein anderer Anbieter konfiguriert ist.
+Liegt Hermes nicht im Benutzerverzeichnis, zeigt `HERMES_HOME` auf das Verzeichnis mit `hermes-agent`.
+Für bessere Ergebnisse einen stärkeren Anbieter in Hermes hinterlegen (`hermes tools`) und
+`HERMES_SEARCH_BACKEND` entsprechend setzen — etwa `tavily` oder `firecrawl`.
+
+**Betrieb:** DuckDuckGo drosselt wiederholte Anfragen und liefert dann eine leere Trefferliste. Die
+App versucht es einmal erneut. Bleibt es leer, hilft ein anderer Rückgriff.
+
+## Langsame Reasoning-Modelle (ADR-018)
+
+Modelle wie NVIDIA-Nemotron denken vor jeder Antwort nach — gemessen 39–52 Sekunden je Aufruf, womit
+Recherche-Läufe ins Zeitlimit laufen. Die App schaltet das bei NVIDIA automatisch ab (13 Sekunden je
+Aufruf). Steuerbar über `LLM_DISABLE_THINKING`: `auto` (Standard), `on`, `off`.
+
+Für langsame Modelle zusätzlich in `.env.local`:
+
+```
+LLM_TIMEOUT_MS=120000
+MAX_RUN_WALL_CLOCK_MS=600000
+```
 
 ## Prüfen
 

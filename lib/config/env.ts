@@ -7,7 +7,7 @@ const boolish = z
   .transform((v) => (typeof v === 'boolean' ? v : /^(1|true|yes|on)$/i.test(v)));
 
 const envSchema = z.object({
-  LLM_PROVIDER: z.enum(['auto', 'openai', 'nvidia', 'compatible']).default('auto'),
+  LLM_PROVIDER: z.enum(['auto', 'openai', 'nvidia', 'compatible', 'hermes']).default('auto'),
   OPENAI_API_KEY: z.string().trim().optional(),
   OPENAI_MODEL_FAST: z.string().default('gpt-5-mini'),
   OPENAI_MODEL_MAIN: z.string().default('gpt-5-mini'),
@@ -15,12 +15,28 @@ const envSchema = z.object({
   NVIDIA_BASE_URL: z.string().default('https://integrate.api.nvidia.com/v1'),
   NVIDIA_MODEL_FAST: z.string().default('meta/llama-3.3-70b-instruct'),
   NVIDIA_MODEL_MAIN: z.string().default('meta/llama-3.3-70b-instruct'),
+  // Hermes-Agent-CLI als Anbieter: die Zugangsdaten liegen dann in ~/.hermes/.env (ADR-015).
+  HERMES_BIN: z.string().default('hermes'),
+  HERMES_PROVIDER: z.string().default('nvidia'),
+  HERMES_MODEL_FAST: z.string().default('meta/llama-3.3-70b-instruct'),
+  HERMES_MODEL_MAIN: z.string().default('meta/llama-3.3-70b-instruct'),
+  /** Wurzelverzeichnis der Hermes-Installation — dort liegt die Python-Umgebung für die Websuche. */
+  HERMES_HOME: z.string().default(''),
+  /** Suchrückgriff in Hermes: 'ddgs' braucht keinen Schlüssel. */
+  HERMES_SEARCH_BACKEND: z.string().default('ddgs'),
   LLM_BASE_URL: z.string().optional(),
   LLM_API_KEY: z.string().trim().optional(),
   LLM_MODEL_FAST: z.string().optional(),
   LLM_MODEL_MAIN: z.string().optional(),
   LLM_TIMEOUT_MS: z.coerce.number().int().positive().default(60000),
-  SEARCH_PROVIDER: z.enum(['auto', 'openai', 'brave', 'tavily']).default('auto'),
+  /**
+   * Schaltet den internen Denkschritt von Reasoning-Modellen ab.
+   * Bei NVIDIA-Nemotron sinkt die Antwortzeit dadurch von rund 50 auf 13 Sekunden —
+   * für Zwischenschritte wie Textauswertung ist das der Unterschied zwischen
+   * benutzbar und unbrauchbar. 'auto' schaltet nur bei NVIDIA ab.
+   */
+  LLM_DISABLE_THINKING: z.enum(['auto', 'on', 'off']).default('auto'),
+  SEARCH_PROVIDER: z.enum(['auto', 'openai', 'brave', 'tavily', 'hermes']).default('auto'),
   BRAVE_API_KEY: z.string().trim().optional(),
   BRAVE_BASE_URL: z.string().default('https://api.search.brave.com/res/v1'),
   TAVILY_API_KEY: z.string().trim().optional(),
@@ -72,7 +88,7 @@ const envSchema = z.object({
 
 export type EnvConfig = z.infer<typeof envSchema>;
 
-export type LlmProviderName = 'openai' | 'nvidia' | 'compatible' | 'none';
+export type LlmProviderName = 'openai' | 'nvidia' | 'compatible' | 'hermes' | 'none';
 
 export interface AppConfig extends EnvConfig {
   /** true, sobald ein LLM-Anbieter vollständig konfiguriert ist. */
@@ -120,6 +136,7 @@ export function getConfig(): AppConfig {
   if (resolvedProvider === 'compatible' && (!env.LLM_API_KEY || !env.LLM_BASE_URL)) {
     throw new Error('Ungültige Konfiguration: LLM_API_KEY und LLM_BASE_URL werden für LLM_PROVIDER=compatible benötigt');
   }
+  // Für 'hermes' prüft die App nichts: die Zugangsdaten verwaltet Hermes in ~/.hermes/.env.
 
   if (env.SEARCH_PROVIDER === 'brave' && !env.BRAVE_API_KEY) {
     throw new Error('Ungültige Konfiguration: BRAVE_API_KEY fehlt für SEARCH_PROVIDER=brave');
@@ -130,12 +147,14 @@ export function getConfig(): AppConfig {
 
   const activeModelFast =
     resolvedProvider === 'nvidia' ? env.NVIDIA_MODEL_FAST
-      : resolvedProvider === 'compatible' ? (env.LLM_MODEL_FAST ?? env.OPENAI_MODEL_FAST)
-        : env.OPENAI_MODEL_FAST;
+      : resolvedProvider === 'hermes' ? env.HERMES_MODEL_FAST
+        : resolvedProvider === 'compatible' ? (env.LLM_MODEL_FAST ?? env.OPENAI_MODEL_FAST)
+          : env.OPENAI_MODEL_FAST;
   const activeModelMain =
     resolvedProvider === 'nvidia' ? env.NVIDIA_MODEL_MAIN
-      : resolvedProvider === 'compatible' ? (env.LLM_MODEL_MAIN ?? env.OPENAI_MODEL_MAIN)
-        : env.OPENAI_MODEL_MAIN;
+      : resolvedProvider === 'hermes' ? env.HERMES_MODEL_MAIN
+        : resolvedProvider === 'compatible' ? (env.LLM_MODEL_MAIN ?? env.OPENAI_MODEL_MAIN)
+          : env.OPENAI_MODEL_MAIN;
 
   const config: AppConfig = {
     ...env,

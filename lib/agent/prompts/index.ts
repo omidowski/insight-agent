@@ -114,7 +114,10 @@ export const conversationPrompt = (request: string, history: { role: 'user' | 'a
   version: 'v1',
   system: systemBase(
     'Du bist ein hilfsbereiter Assistent mit Rechercheschwerpunkt. Antworte knapp, sachlich und freundlich. ' +
-      'Wenn eine Frage aktuelle Daten oder Belege erfordert, weise darauf hin, dass du eine Recherche starten kannst.',
+      'Wenn eine Frage aktuelle Daten oder Belege erfordert, weise darauf hin, dass du eine Recherche starten kannst. ' +
+      'Du hast in diesem Modus KEINE Quellen abgerufen. Erfinde niemals Quellen, Messwerte, Zitate oder ' +
+      'Domainnamen und gib nichts als belegt aus. Wenn du eine tagesaktuelle Angabe nicht kennst, sage das ' +
+      'und biete eine Recherche an, statt einen Wert zu nennen.',
   ),
   input: [...history, { role: 'user', text: request }],
 });

@@ -26,14 +26,21 @@ const RECOMMENDED: Record<string, { id: string; note: string }[]> = {
     { id: 'gpt-4.1-mini', note: 'Günstig' },
   ],
   nvidia: [
-    { id: 'meta/llama-3.3-70b-instruct', note: 'Solide Allzweckwahl' },
-    { id: 'nvidia/llama-3.3-nemotron-super-49b-v1', note: 'Auf Reasoning optimiert' },
-    { id: 'qwen/qwen2.5-72b-instruct', note: 'Stark bei strukturierten Ausgaben' },
-    { id: 'deepseek-ai/deepseek-r1', note: 'Reasoning, langsamer' },
-    { id: 'mistralai/mistral-large-2-instruct', note: 'Gut für europäische Sprachen' },
-    { id: 'meta/llama-3.1-8b-instruct', note: 'Sehr schnell, einfache Aufgaben' },
+    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b', note: 'Zuverlässig, empfohlen' },
+    { id: 'minimaxai/minimax-m3', note: 'Stark bei langen Texten, knappes Kontingent' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b', note: 'Reasoning, knappes Kontingent' },
+    { id: 'openai/gpt-oss-20b', note: 'Offenes Modell, knappes Kontingent' },
+    { id: 'moonshotai/kimi-k3', note: 'Höchste Qualität, stark gedrosselt' },
   ],
   compatible: [],
+  // Hermes leitet auf NVIDIA weiter — dieselben geprüften Modelle.
+  hermes: [
+    { id: 'nvidia/nemotron-3.5-lightning-30b-a3b', note: 'Zuverlässig, empfohlen' },
+    { id: 'minimaxai/minimax-m3', note: 'Stark bei langen Texten, knappes Kontingent' },
+    { id: 'nvidia/nemotron-3-super-120b-a12b', note: 'Reasoning, knappes Kontingent' },
+    { id: 'openai/gpt-oss-20b', note: 'Offenes Modell, knappes Kontingent' },
+    { id: 'moonshotai/kimi-k3', note: 'Höchste Qualität, stark gedrosselt' },
+  ],
 };
 
 /** Modelle, die für dieses Produkt ungeeignet sind (kein Chat/Text). */
@@ -51,6 +58,9 @@ function endpointFor(): { baseUrl: string; apiKey: string; provider: string } {
       return { baseUrl: config.NVIDIA_BASE_URL, apiKey: config.NVIDIA_API_KEY ?? '', provider: 'nvidia' };
     case 'compatible':
       return { baseUrl: config.LLM_BASE_URL ?? '', apiKey: config.LLM_API_KEY ?? '', provider: 'compatible' };
+    case 'hermes':
+      // Der Schlüssel liegt in Hermes; die App fragt die Liste nicht ab und zeigt die Empfehlungen.
+      return { baseUrl: '', apiKey: '', provider: 'hermes' };
     default:
       throw new AppErrorException(
         appError('LLM_NOT_CONFIGURED', 'kein Anbieter konfiguriert', {
@@ -71,6 +81,7 @@ export async function getModelCatalog(force = false): Promise<ModelCatalog> {
 
   let ids: string[] = [];
   try {
+    if (!baseUrl) throw new Error('kein Katalog-Endpunkt für diesen Anbieter');
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/models`, {
       headers: { Authorization: `Bearer ${apiKey}` },
       signal: AbortSignal.timeout(10_000),

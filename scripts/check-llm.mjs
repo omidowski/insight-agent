@@ -50,6 +50,14 @@ const SETUP = {
     main: env.LLM_MODEL_MAIN || 'unbekannt',
     endpoint: 'chat',
   },
+  hermes: {
+    label: `Hermes-CLI → ${env.HERMES_PROVIDER || 'nvidia'}`,
+    key: 'in-hermes',
+    baseUrl: '(Zugangsdaten in ~/.hermes/.env)',
+    fast: env.HERMES_MODEL_FAST || 'meta/llama-3.3-70b-instruct',
+    main: env.HERMES_MODEL_MAIN || 'meta/llama-3.3-70b-instruct',
+    endpoint: 'hermes',
+  },
 };
 
 if (provider === 'fixture') {
@@ -67,6 +75,36 @@ console.log(`  Länge             : ${cfg.key.length} Zeichen`);
 console.log(`  Modell (fast)     : ${cfg.fast}`);
 console.log(`  Modell (main)     : ${cfg.main}`);
 console.log('');
+
+if (provider === 'hermes') {
+  // Hermes hält die Zugangsdaten selbst; geprüft wird ein echter Aufruf.
+  const { spawnSync } = await import('node:child_process');
+  const bin = env.HERMES_BIN || 'hermes';
+  console.log(`Prüfe Hermes-Aufruf (${bin}) …`);
+  const probe = spawnSync(
+    bin,
+    ['chat', '-q', 'Antworte nur mit: ok', '--quiet', '--max-turns', '1', '--ignore-rules',
+     '-m', cfg.main, '--provider', env.HERMES_PROVIDER || 'nvidia'],
+    { encoding: 'utf8', timeout: 90_000, env: { ...process.env, NO_COLOR: '1' } },
+  );
+  const combined = `${probe.stdout ?? ''}\n${probe.stderr ?? ''}`;
+  if (/No inference provider configured|set an API key|No usable credentials found/i.test(combined)) {
+    console.log('✗ Hermes hat keine Zugangsdaten.');
+    console.log('  Trage den Schlüssel mit `npm run set-key -- --hermes` in ~/.hermes/.env ein.');
+    process.exit(1);
+  }
+  if (/no credits remaining|insufficient[_ ]quota/i.test(combined)) {
+    console.log('✗ Das Kontingent des Anbieters ist aufgebraucht.');
+    process.exit(1);
+  }
+  if (probe.status !== 0) {
+    console.log(`✗ Hermes endete mit Code ${probe.status}: ${combined.trim().slice(0, 300)}`);
+    process.exit(1);
+  }
+  console.log('✓ Hermes antwortet.');
+  console.log(`  Antwort: ${(probe.stdout ?? '').trim().split('\n')[0]?.slice(0, 80)}`);
+  process.exit(0);
+}
 
 if (cfg.key.length < 20) {
   console.log(`✗ Kein gültiger Schlüssel für ${cfg.label}. Setze ihn mit \`npm run set-key\`.`);

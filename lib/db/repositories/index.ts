@@ -82,6 +82,7 @@ export function createRepositories(db: Db) {
     touch(id: string): void {
       db.prepare('UPDATE conversations SET updated_at = ? WHERE id = ?').run(nowIso(), id);
     },
+    /** Löscht endgültig — Nachrichten, Läufe, Quellen und Belege werden mitgelöscht. */
     remove(id: string, userId: string): boolean {
       const res = db.prepare('DELETE FROM conversations WHERE id = ? AND user_id = ?').run(id, userId);
       return Number(res.changes) > 0;

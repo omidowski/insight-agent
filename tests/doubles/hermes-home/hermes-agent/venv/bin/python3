@@ -1,0 +1,18 @@
+#!/bin/bash
+# Test-Double für Hermes' Python-Umgebung. Gibt die Suchtreffer aus, die die
+# echte Installation liefern würde. Verhalten über HERMES_SEARCH_STUB steuerbar.
+# Argumente: -c <script> <query> <limit> <backend>
+QUERY="$3"
+LIMIT="$4"
+case "${HERMES_SEARCH_STUB:-ok}" in
+  unconfigured)
+    printf '%s' '{"error": "Error searching web: Web tools are not configured. Set FIRECRAWL_API_KEY."}' ;;
+  broken)
+    printf '%s' 'Traceback (most recent call last): ImportError' ;;
+  empty)
+    printf '%s' '{"success": true, "data": {"web": []}}' ;;
+  crash)
+    echo "boom" >&2; exit 3 ;;
+  *)
+    printf '{"success": true, "data": {"web": [{"title": "Treffer zu %s", "url": "https://beispiel.test/a", "description": "Beschreibung A", "position": 1}, {"title": "Zweiter Treffer", "url": "https://beispiel.test/b", "description": "Beschreibung B", "position": 2}, {"url": "https://beispiel.test/c", "description": "ohne Titel", "position": 3}, {"title": "ohne URL", "description": "wird verworfen", "position": 4}]}}' "$QUERY" ;;
+esac

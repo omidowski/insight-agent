@@ -10,13 +10,7 @@ import { ActivityCard } from '@/components/activity/ActivityCard';
 import { SourcesPanel } from '@/components/sources/SourcesPanel';
 import { Markdown } from '@/components/chat/Markdown';
 
-const EXAMPLES = [
-  'Recherchiere aktuelle Statistiken über den Fußballspieler Jamal Musiala.',
-  'Vergleiche den Umsatz der wertvollsten europäischen Fußballvereine und erstelle eine Tabelle.',
-  'Was ist ein Vektor-Embedding?',
-];
 
-const MODE_LABEL: Record<Mode, string> = { auto: 'Automatisch', chat: 'Nur Chat', research: 'Recherche' };
 
 interface ModelInfo {
   id: string;
@@ -48,7 +42,8 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
   const [activity, setActivity] = useState<ActivityState>(initialActivityState);
   const [runId, setRunId] = useState<string | null>(null);
   const [running, setRunning] = useState(false);
-  const [mode, setMode] = useState<Mode>('auto');
+  // Der Agent entscheidet selbst zwischen Chat und Recherche — keine manuelle Auswahl.
+  const mode: Mode = 'auto';
   const [input, setInput] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState<number | null>(null);
@@ -296,7 +291,6 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
 
   const removeConversation = useCallback(
     async (id: string) => {
-      if (!window.confirm('Diese Unterhaltung mit allen Quellen löschen?')) return;
       try {
         await api.deleteConversation(id);
         if (id === activeId) startNew();
@@ -373,7 +367,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
           >
             ☰
           </button>
-          <h1 className="truncate text-sm font-semibold">Insight Agent</h1>
+          <h1 className="truncate text-sm font-semibold">Autonomous Intelligence</h1>
           {configured && (
             <span className="hidden rounded-full border border-border px-2 py-0.5 text-[11px] text-muted sm:inline">
               {PROVIDER_LABEL[provider] ?? provider}
@@ -405,17 +399,6 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
                 </select>
               </>
             )}
-            <label className="sr-only" htmlFor="mode">Modus</label>
-            <select
-              id="mode"
-              value={mode}
-              onChange={(event) => setMode(event.target.value as Mode)}
-              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-xs"
-            >
-              {(Object.keys(MODE_LABEL) as Mode[]).map((value) => (
-                <option key={value} value={value}>{MODE_LABEL[value]}</option>
-              ))}
-            </select>
             {sources.length > 0 && (
               <button
                 type="button"
@@ -453,19 +436,6 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
                   Stelle eine normale Frage oder gib eine Rechercheaufgabe — der Agent plant, sucht, liest Quellen
                   und belegt jede Aussage.
                 </p>
-                <ul className="mt-4 space-y-2">
-                  {EXAMPLES.map((example) => (
-                    <li key={example}>
-                      <button
-                        type="button"
-                        onClick={() => setInput(example)}
-                        className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-left text-sm hover:border-accent"
-                      >
-                        {example}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
               </div>
             )}
 

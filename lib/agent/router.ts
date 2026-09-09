@@ -10,6 +10,22 @@ import { isAbort } from '@/lib/util/errors';
 
 const GREETING_ONLY = /^(hi|hallo|hey|moin|servus|yo|hello|guten (morgen|tag|abend)|danke|tschüss|bye)[\s!.,?]*$/i;
 
+/**
+ * Fragen nach tagesaktuellen Angaben. Diese Prüfung steht bewusst NEBEN dem Modell:
+ * schwächere Modelle stufen „Wie ist das Wetter in Hamburg?" als Plauderei ein und
+ * beantworten sie dann aus dem Gedächtnis — also frei erfunden. Für solche Fragen
+ * gibt es nur eine richtige Antwort: nachsehen.
+ */
+const LIVE_FACT =
+  /\b(wetter|temperatur|regnet|schneit|vorhersage|wechselkurs|kurs|aktienkurs|preis|kostet|spielstand|ergebnis|tabelle|stand|nachrichten|schlagzeilen|öffnungszeit\w*|fahrplan|fährt|abfahrt|verspätung|weather|forecast|price|score|news)\b/i;
+const LIVE_TIME =
+  /\b(heute|jetzt|gerade|aktuell(e[nrs]?)?|momentan|derzeit|neueste[nrs]?|nächste[nrs]?|naechste[nrs]?|letzte[nrs]?|dieses jahr|diese woche|now|today|current|latest)\b/i;
+
+/** Braucht die Anfrage zwingend einen Blick ins Netz? */
+export function needsLiveLookup(request: string): boolean {
+  return LIVE_FACT.test(request) || LIVE_TIME.test(request);
+}
+
 export function decisionFor(taskType: TaskType, confidence: number, summary: string, config: AppConfig, clarificationNeeded = false): RouteDecision {
   const path = PATHS[taskType];
   return {
@@ -44,6 +60,7 @@ export async function route(args: {
   if (GREETING_ONLY.test(request.trim())) {
     return decisionFor('conversation', 0.99, 'Begrüßung erkannt', config);
   }
+  const liveLookup = needsLiveLookup(request);
 
   const history = args.history.slice(-6).map((m) => `${m.role}: ${m.text.slice(0, 200)}`);
   const prompt = routerPrompt(request, history);
@@ -71,10 +88,20 @@ export async function route(args: {
       output.clarificationNeeded && confidence < config.ROUTER_CLARIFY_THRESHOLD;
     if (clarify) taskType = 'knowledge_question';
 
+    // Tagesaktuelle Angaben lassen sich nicht aus dem Modellwissen beantworten,
+    // egal wie sicher sich das Modell ist.
+    if (liveLookup && !PATHS[taskType].needsResearch) {
+      logger.debug('router live-fact override', { module: 'router', from: taskType });
+      return decisionFor('web_lookup', confidence, `${output.summary} (aktuelle Angabe — Websuche nötig)`, config);
+    }
+
     return decisionFor(taskType, confidence, output.summary, config, clarify);
   } catch (err) {
     if (isAbort(err)) throw err;
     logger.warn('router fallback', { module: 'router', error: String(err).slice(0, 200) });
+    if (liveLookup) {
+      return decisionFor('web_lookup', 0, 'Klassifikation fehlgeschlagen — aktuelle Angabe, Websuche', config);
+    }
     return decisionFor('knowledge_question', 0, 'Klassifikation fehlgeschlagen — Fallback', config);
   }
 }

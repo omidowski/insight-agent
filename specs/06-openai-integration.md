@@ -32,8 +32,10 @@ Out of Scope: Prompttexte (Spec 07), Toolausführung (Spec 18).
 - `FR-06-04` Jeder Aufruf MUSS Usage (Input-/Output-Token, geschätzte Kosten) an `usage_events` melden.
 - `FR-06-05` Der Provider MUSS über `AbortSignal` abbrechbar sein.
 - `FR-06-06` Modellnamen kommen ausschließlich aus der Konfiguration.
-- `FR-06-07` Neben OpenAI MUSS mindestens ein OpenAI-kompatibler Anbieter (Chat Completions) nutzbar sein;
-  die Auswahl erfolgt über `LLM_PROVIDER` (ADR-012).
+- `FR-06-07` Neben OpenAI MÜSSEN nutzbar sein: ein OpenAI-kompatibler HTTP-Anbieter (Chat Completions,
+  ADR-012) und die Hermes-Agent-CLI (ADR-015). Die Auswahl erfolgt über `LLM_PROVIDER`.
+- `FR-06-09` Beim Anbieter `hermes` DARF die Anwendung keine Zugangsdaten halten; fehlende Zugangsdaten
+  MÜSSEN als `LLM_NOT_CONFIGURED` mit Verweis auf `~/.hermes/.env` gemeldet werden.
 - `FR-06-08` Anbieterfehler MÜSSEN als behebbare Meldung erscheinen: abgelehnter Schlüssel, fehlendes
   Modell, erschöpftes Kontingent und Ratelimit werden unterschieden.
 
@@ -120,6 +122,8 @@ Abbruch, Usage-Erfassung. Kein Netzwerkzugriff in Tests.
   `/chat/completions` der NVIDIA-Basis-URL und das Ergebnis erfüllt dieselbe Schnittstelle. (FR-06-07)
 - `AC-06-06` Given HTTP 401 bzw. `insufficient_quota`, Then nennt `userMessage` die konkrete Ursache
   und der Fehler ist nicht `retryable`. (FR-06-08)
+- `AC-06-07` Given `LLM_PROVIDER=hermes` und fehlende Zugangsdaten in Hermes, Then meldet die App
+  `LLM_NOT_CONFIGURED` mit dem Hinweis auf `~/.hermes/.env`. (FR-06-09)
 
 ## Definition of Done
 Provider-Tests grün; Fixture- und OpenAI-Provider erfüllen dieselbe Testsuite (Contract-Test).

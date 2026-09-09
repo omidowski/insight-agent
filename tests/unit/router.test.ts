@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { route } from '@/lib/agent/router';
+import { route, needsLiveLookup } from '@/lib/agent/router';
 import { FakeLLMProvider } from '../doubles/fake-llm';
 import { getConfig, resetConfig } from '@/lib/config/env';
 import type { LLMProvider, ObjectRequest } from '@/lib/llm/provider';
@@ -70,9 +70,44 @@ describe('Spec 13 — Request Router', () => {
       generateObject: async () => { throw new Error('down'); },
     };
     const decision = await route({
-      request: 'Recherchiere etwas Aktuelles.', history: [], mode: 'auto', llm: broken, config,
+      request: 'Erkläre mir bitte den Unterschied zwischen Hefe und Backpulver.',
+      history: [], mode: 'auto', llm: broken, config,
     });
     expect(decision.taskType).toBe('knowledge_question');
     expect(decision.confidence).toBe(0);
+  });
+
+  it('AC-13-05: bei tagesaktuellen Fragen führt der Fallback in die Websuche', async () => {
+    const broken: LLMProvider = {
+      name: 'kaputt',
+      generateText: async () => { throw new Error('down'); },
+      streamText: async function* () { throw new Error('down'); },
+      generateObject: async () => { throw new Error('down'); },
+    };
+    const decision = await route({
+      request: 'Wie ist das Wetter in Hamburg?', history: [], mode: 'auto', llm: broken, config,
+    });
+    expect(decision.taskType).toBe('web_lookup');
+    expect(decision.needsResearch).toBe(true);
+  });
+});
+
+describe('Spec 13 — tagesaktuelle Fragen erzwingen eine Websuche', () => {
+  const cases = [
+    'Wie ist das Wetter in Hamburg?',
+    'Was kostet Bitcoin?',
+    'Wie steht die Bundesliga-Tabelle?',
+    'Wann fährt der nächste Zug?',
+    'Was sind die neuesten Nachrichten?',
+  ];
+  for (const request of cases) {
+    it(`erkennt „${request}" als Live-Anfrage`, () => {
+      expect(needsLiveLookup(request)).toBe(true);
+    });
+  }
+
+  it('lässt zeitlose Fragen unberührt', () => {
+    expect(needsLiveLookup('Was ist ein Vektor-Embedding?')).toBe(false);
+    expect(needsLiveLookup('Erkläre Photosynthese')).toBe(false);
   });
 });

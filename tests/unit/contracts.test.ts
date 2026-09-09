@@ -48,3 +48,35 @@ describe('Spec 05 — Shared Contracts', () => {
     }
   });
 });
+
+describe('Spec 38 — Fehler-Envelope über Bundle-Grenzen', () => {
+  it('erkennt eine Envelope strukturell, auch ohne instanceof-Identität', () => {
+    // Next.js kann dieselbe Klasse in mehreren Bundles laden; dann schlägt instanceof fehl.
+    const fremdeException = {
+      name: 'AppErrorException',
+      message: 'You have no credits remaining.',
+      appError: {
+        code: 'LLM_UNAVAILABLE',
+        message: 'Guthaben erschöpft',
+        userMessage: 'Das OpenAI-Guthaben dieses Kontos ist aufgebraucht. Bitte Abrechnung prüfen.',
+        retryable: false,
+      },
+    };
+    const result = toAppError(fremdeException);
+    expect(result.code).toBe('LLM_UNAVAILABLE');
+    expect(result.userMessage).toContain('Guthaben');
+    expect(result.retryable).toBe(false);
+  });
+
+  it('erkennt auch eine blanke Envelope ohne Wrapper', () => {
+    const result = toAppError({
+      code: 'RATE_LIMITED', message: 'x', userMessage: 'Zu viele Anfragen.', retryable: true,
+    });
+    expect(result.code).toBe('RATE_LIMITED');
+  });
+
+  it('unbekannte Objekte bleiben INTERNAL', () => {
+    expect(toAppError({ irgendwas: 1 }).code).toBe('INTERNAL');
+    expect(toAppError(new Error('kaputt')).code).toBe('INTERNAL');
+  });
+});

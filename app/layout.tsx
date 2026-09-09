@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'Insight Agent — Autonome Recherche',
+  title: 'Autonomous Intelligence — Autonome Recherche',
   description: 'Chat mit einem autonomen AI Research Agent: geplante Recherche, echte Quellen, nachvollziehbare Citations.',
 };
 

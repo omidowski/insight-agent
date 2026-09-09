@@ -37,7 +37,7 @@ function mapError(err: unknown, model?: string): AppErrorException {
       }),
     );
   }
-  if (providerCode === 'insufficient_quota') {
+  if (providerCode === 'insufficient_quota' || /no credits remaining|insufficient[_ ]quota|exceeded your current quota/i.test(detail)) {
     return new AppErrorException(
       appError('LLM_UNAVAILABLE', `Guthaben erschöpft: ${detail}`, {
         retryable: false,

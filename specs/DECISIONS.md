@@ -114,3 +114,69 @@ HTTP, Streaming, Fehlerabbildung und SSRF-Guard. Gleichzeitig bleibt die Suite o
 und ohne Schlüssel lauffähig (Spec 42, FR-42-01).
 **Nebeneffekt:** `BRAVE_BASE_URL` und `TAVILY_BASE_URL` sind jetzt konfigurierbar, was auch Proxys und
 Self-Hosting ermöglicht.
+
+## ADR-015 — Hermes-Agent-CLI als dritter Anbieterweg
+**Entscheidung:** `LLM_PROVIDER=hermes` ruft die installierte Hermes-Agent-CLI als Unterprozess auf
+(`hermes chat -q … --quiet --max-turns 1 --ignore-rules`). Hermes spricht seinerseits den in
+`HERMES_PROVIDER` gewählten Anbieter an — für NVIDIA NIM den dort eingebauten Provider `nvidia`.
+**Alternativen:** Direkter HTTP-Aufruf gegen NVIDIA (ADR-012, bleibt bestehen); `hermes proxy`
+(unterstützt nur Nous Portal und xAI, nicht NVIDIA).
+**Begründung:** Die Zugangsdaten liegen damit in `~/.hermes/.env` statt in der `.env.local` dieser
+Anwendung — ein Schlüssel, eine Stelle, von Hermes verwaltet. Wer Hermes ohnehin eingerichtet hat,
+braucht in diesem Projekt keinen Schlüssel mehr.
+**Bewusst in Kauf genommen:**
+- **Kein echtes Streaming.** Die CLI liefert die fertige Antwort; die App reicht sie in Stücken nach.
+  Der Trace verhält sich gleich, der erste Text erscheint aber später.
+- **Keine Verbrauchsdaten.** Token und Kosten werden geschätzt, die Budgets aus Spec 37 greifen
+  dadurch weniger genau.
+- **Ein Prozessstart je Modellaufruf.** Ein Research-Run macht viele Aufrufe; das ist spürbar
+  langsamer als der HTTP-Weg.
+- **Structured Outputs** entstehen über eine Schema-Anweisung im Prompt plus einen Reparaturversuch,
+  nicht über erzwungene JSON-Schemata.
+**Auswirkung bei Änderung:** Nur `lib/llm/hermes-cli.ts` und der Zweig in `getLLMProvider()`.
+
+## ADR-016 — Websuche über Hermes' Werkzeugsatz, direkt statt über ein Modell
+**Datum:** 2026-09-08 · **Status:** angenommen
+**Kontext:** Die Websuche verlangte bisher BRAVE_API_KEY, TAVILY_API_KEY oder OpenAI. Ohne einen
+davon blieb jede Frage nach tagesaktuellen Angaben unbeantwortet. Hermes bringt einen eigenen
+Werkzeugsatz `web` mit, dessen Rückgriff `ddgs` (DuckDuckGo) ohne Konto arbeitet.
+**Entscheidung:** `HermesSearchProvider` ruft Hermes' `web_search_tool` direkt in dessen
+Python-Umgebung auf (`<HERMES_HOME>/hermes-agent/venv/bin/python3`) — nicht über `hermes chat`.
+**Begründung:** Der Umweg über die Chat-CLI bräuchte selbst ein Sprachmodell, kostete Token und
+wäre nicht reproduzierbar. Der direkte Aufruf ist deterministisch und schlüsselfrei.
+**Sicherheit:** Die Suchanfrage wird als `argv`-Argument übergeben, nie in den Python-Quelltext
+eingesetzt — sonst wäre sie ausführbarer Code. Der Aufruf läuft ohne Shell. Treffer sind DATEN;
+Titel und Beschreibung werden gekürzt und unverändert weitergereicht.
+**Bewusst in Kauf genommen:** DuckDuckGo drosselt wiederholte Anfragen und antwortet dann mit einer
+leeren Trefferliste statt mit einem Fehler. Dagegen steht ein einmaliger Wiederholversuch nach
+1,2 Sekunden. Wer bessere Ergebnisse braucht, hinterlegt in Hermes einen stärkeren Anbieter und
+setzt HERMES_SEARCH_BACKEND.
+**Voraussetzung:** Das Paket `ddgs` muss in Hermes' Umgebung installiert sein.
+**Auswirkung bei Änderung:** Nur `lib/search/hermes.ts` und der Zweig in `getSearchProvider()`.
+
+## ADR-017 — Tagesaktuelle Fragen umgehen die Modellentscheidung
+**Datum:** 2026-09-08 · **Status:** angenommen
+**Kontext:** Der Router stufte „Wie ist das Wetter in Hamburg?" mit einem schwächeren Modell als
+`conversation` ein. Es wurde nicht gesucht — und das Modell erfand Quellen samt Messwerten.
+**Entscheidung:** Zwei Muster (`LIVE_FACT`, `LIVE_TIME`) prüfen die Anfrage NEBEN dem Modell. Treffen
+sie zu und hat der gewählte Pfad keine Recherche, wird auf `web_lookup` hochgestuft. Schlägt die
+Klassifikation ganz fehl, führt der Rückfall bei solchen Fragen ebenfalls in die Websuche.
+**Begründung:** Ob eine Frage tagesaktuelle Daten braucht, ist eine Eigenschaft der Frage, keine
+Ermessensfrage des Modells. Eine erfundene Temperatur ist schlimmer als eine langsame Antwort.
+**Ergänzend:** Der Gesprächs-Prompt untersagt ausdrücklich, Quellen, Messwerte, Zitate oder
+Domainnamen zu erfinden.
+**Bewusst in Kauf genommen:** Die Muster sind deutschsprachig plus einige englische Begriffe und
+greifen gelegentlich zu weit — eine unnötige Suche kostet Zeit, eine erfundene Zahl kostet Vertrauen.
+**Auswirkung bei Änderung:** Nur `needsLiveLookup()` in `lib/agent/router.ts`.
+
+## ADR-018 — Denkschritt von Reasoning-Modellen abschalten
+**Datum:** 2026-09-08 · **Status:** angenommen
+**Kontext:** NVIDIA-Nemotron denkt vor jeder Antwort sichtbar nach. Gemessen: 39–52 Sekunden je
+Aufruf. Ein Research-Run macht viele Aufrufe und lief dadurch zuverlässig ins Zeitlimit.
+**Entscheidung:** Der OpenAI-kompatible Anbieter sendet `chat_template_kwargs: { thinking: false }`.
+`LLM_DISABLE_THINKING` steuert das: `auto` (nur bei NVIDIA), `on`, `off`.
+**Messung:** Dieselbe Anfrage fiel von 52 auf 13 Sekunden; `reasoning_content` kam als `null` zurück.
+**Bewusst in Kauf genommen:** Für Zwischenschritte wie Auswertung und Klassifikation ist der
+Denkschritt verzichtbar; bei der Schlussantwort kann die Qualität sinken. Wer das nicht will,
+setzt `LLM_DISABLE_THINKING=off`. Andere Anbieter kennen den Schalter nicht — deshalb `auto`.
+**Auswirkung bei Änderung:** Nur `thinkingOff()` in `lib/llm/openai-compatible.ts`.

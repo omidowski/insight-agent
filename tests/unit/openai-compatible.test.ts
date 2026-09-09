@@ -141,3 +141,27 @@ describe('Spec 06 / ADR-012 — OpenAI-kompatibler Provider', () => {
     ).rejects.toMatchObject({ appError: { code: 'RUN_CANCELLED' } });
   });
 });
+
+describe('Spec 06 — Guthaben und Ratelimit unterscheiden', () => {
+  it('erschöpftes Guthaben ist nicht retrybar und nennt die Ursache', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({ error: { message: 'You have no credits remaining. Add credits to continue.' } }, 429),
+    );
+    const provider = new OpenAICompatibleProvider(base);
+    await expect(
+      provider.generateText({ system: 's', input: [{ role: 'user', text: 'x' }], purpose: 'router' }),
+    ).rejects.toMatchObject({
+      appError: { code: 'LLM_UNAVAILABLE', retryable: false, userMessage: expect.stringContaining('Kontingent') },
+    });
+  });
+
+  it('ein echtes Ratelimit bleibt retrybar', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      jsonResponse({ error: { message: 'Rate limit reached for requests' } }, 429),
+    );
+    const provider = new OpenAICompatibleProvider(base);
+    await expect(
+      provider.generateText({ system: 's', input: [{ role: 'user', text: 'x' }], purpose: 'router' }),
+    ).rejects.toMatchObject({ appError: { retryable: true } });
+  });
+});

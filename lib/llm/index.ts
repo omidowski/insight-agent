@@ -3,6 +3,7 @@ import { getConfig } from '@/lib/config/env';
 import type { LLMProvider, UsageSink } from './provider';
 import { OpenAIProvider } from './openai';
 import { OpenAICompatibleProvider } from './openai-compatible';
+import { HermesCliProvider } from './hermes-cli';
 import { appError, AppErrorException } from '@/lib/util/errors';
 
 export function getLLMProvider(sink?: UsageSink): LLMProvider {
@@ -22,6 +23,8 @@ export function getLLMProvider(sink?: UsageSink): LLMProvider {
         },
         sink,
       );
+    case 'hermes':
+      return new HermesCliProvider(sink);
     case 'compatible':
       return new OpenAICompatibleProvider(
         {
@@ -50,3 +53,4 @@ export * from './provider';
 export { renderInput } from './render';
 export { OpenAIProvider } from './openai';
 export { OpenAICompatibleProvider } from './openai-compatible';
+export { HermesCliProvider } from './hermes-cli';

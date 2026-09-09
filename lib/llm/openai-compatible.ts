@@ -45,7 +45,7 @@ function mapError(status: number, body: unknown, model: string, providerName: st
       }),
     );
   }
-  if (code === 'insufficient_quota' || /credit|quota/i.test(detail)) {
+  if (code === 'insufficient_quota' || /no credits remaining|insufficient[_ ]quota|exceeded your current quota|credit balance/i.test(detail)) {
     return new AppErrorException(
       appError('LLM_UNAVAILABLE', `${providerName}: Kontingent erschöpft: ${detail}`, {
         retryable: false,
@@ -104,6 +104,19 @@ export class OpenAICompatibleProvider implements LLMProvider {
     });
   }
 
+  /**
+   * Reasoning-Modelle denken vor der Antwort sichtbar nach. Das kostet bei Nemotron
+   * das Vierfache an Zeit und bringt für Zwischenschritte nichts. NVIDIA akzeptiert
+   * beide Schalter; andere Anbieter kennen sie nicht, deshalb nur bei Bedarf.
+   */
+  private thinkingOff(): Record<string, unknown> {
+    const config = getConfig();
+    const wanted =
+      config.LLM_DISABLE_THINKING === 'on' ||
+      (config.LLM_DISABLE_THINKING === 'auto' && config.llmProvider === 'nvidia');
+    return wanted ? { chat_template_kwargs: { thinking: false } } : {};
+  }
+
   private async post(body: Record<string, unknown>, signal: AbortSignal | undefined, model: string): Promise<Response> {
     const config = getConfig();
     const timeout = AbortSignal.timeout(config.LLM_TIMEOUT_MS);
@@ -116,7 +129,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           Authorization: `Bearer ${this.options.apiKey}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ ...this.thinkingOff(), ...body }),
         signal: combined,
       });
     } catch (err) {

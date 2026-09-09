@@ -65,11 +65,26 @@ export function redact(text: string): string {
   return text.replace(SECRET_PATTERN, '[redacted]');
 }
 
-export function toAppError(err: unknown): AppError {
-  if (err instanceof AppErrorException) return err.appError;
-  if (err && typeof err === 'object' && 'code' in err && 'userMessage' in err) {
-    return err as AppError;
+/**
+ * Erkennt eine Fehler-Envelope strukturell statt über `instanceof`.
+ * Next.js bündelt Module je Route; dieselbe Klasse kann dadurch mehrfach existieren,
+ * und `instanceof` schlägt über Bundle-Grenzen hinweg fehl.
+ */
+function unwrapAppError(err: unknown): AppError | undefined {
+  if (!err || typeof err !== 'object') return undefined;
+  const candidate = (err as { appError?: unknown }).appError ?? err;
+  if (
+    candidate && typeof candidate === 'object' &&
+    'code' in candidate && 'userMessage' in candidate && 'retryable' in candidate
+  ) {
+    return candidate as AppError;
   }
+  return undefined;
+}
+
+export function toAppError(err: unknown): AppError {
+  const unwrapped = unwrapAppError(err);
+  if (unwrapped) return unwrapped;
   if (err instanceof Error) {
     if (err.name === 'AbortError' || err.message === 'aborted') {
       return appError('RUN_CANCELLED', 'aborted');
