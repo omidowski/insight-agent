@@ -1,0 +1,17 @@
+{
+  "created": "2026-09-09",
+  "dir": "02-insight-agent-improve-pass",
+  "phases": null,
+  "prefix": "IAIP",
+  "slug": "insight-agent-improve-pass",
+  "source_prompt": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.cursor/prompts/INSIGHT-AGENT-IMPROVE-PASS.md",
+  "source_sha256": "3365a23ec0a1b2aa40adc7d6cdc9b678389e351dbdd605623dcadd0294caedfb",
+  "status": "planned",
+  "title": "Insight Agent — improve pass",
+  "waves": [
+    "Inventory and dry-run classification",
+    "Scaffolding and contracts",
+    "Implementation slices",
+    "Verification and rollout"
+  ]
+}

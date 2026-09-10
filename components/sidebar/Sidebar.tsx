@@ -24,28 +24,31 @@ export function Sidebar({ conversations, activeId, onSelect, onNew, onDelete, on
   }, [pendingId]);
 
   return (
-    <nav className="flex h-full flex-col border-r border-border bg-surface" aria-label="Unterhaltungen">
-      <div className="flex items-center gap-2 p-3">
-        <button
-          type="button"
-          onClick={onNew}
-          className="flex-1 rounded-lg border border-border px-3 py-2 text-sm font-medium hover:bg-bg"
-        >
-          + Neuer Chat
-        </button>
-        {onClose && (
+    <nav className="flex h-full w-full flex-col border-r border-border/80 bg-surface/90 backdrop-blur-md" aria-label="Unterhaltungen">
+      <div className="border-b border-border/70 px-3 pb-3 pt-3">
+        <p className="font-display mb-2 px-0.5 text-xs font-semibold tracking-wide text-muted">Chats</p>
+        <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={onClose}
-            className="rounded-lg border border-border px-2.5 py-2 text-sm lg:hidden"
-            aria-label="Seitenleiste schließen"
+            onClick={onNew}
+            className="flex-1 rounded-xl border border-border bg-bg/70 px-3 py-2 text-sm font-medium transition hover:border-accent hover:bg-bg"
           >
-            ✕
+            + Neuer Chat
           </button>
-        )}
+          {onClose && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg border border-border px-2.5 py-2 text-sm lg:hidden"
+              aria-label="Seitenleiste schließen"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
-      <ul className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3">
+      <ul className="flex-1 space-y-0.5 overflow-y-auto px-2 pb-3 pt-2">
         {conversations.length === 0 && (
           <li className="px-2 py-3 text-xs text-muted">Noch keine Unterhaltungen.</li>
         )}

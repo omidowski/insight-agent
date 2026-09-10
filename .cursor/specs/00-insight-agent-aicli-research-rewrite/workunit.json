@@ -1,0 +1,16 @@
+{
+  "created": "2026-09-09",
+  "dir": "00-insight-agent-aicli-research-rewrite",
+  "phases": null,
+  "prefix": "IAAR",
+  "slug": "insight-agent-aicli-research-rewrite",
+  "source_prompt": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.cursor/prompts/INSIGHT-AGENT-AICLI-RESEARCH-REWRITE.md",
+  "source_sha256": "69c2bbf0d87ee56ac552db38a831832ad15dd00bf00ee0b25144db623be2c218",
+  "status": "planned",
+  "title": "Insight Agent — AI CLI research rewrite + enhance",
+  "waves": [
+    "Confirm PROJECT.md, brain, ADR, testing SSOT",
+    "Harden research engine + deep loop (specs 24/25)",
+    "Provider failover + query diversity tests"
+  ]
+}

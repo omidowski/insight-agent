@@ -14,6 +14,7 @@ import { extractionPrompt, queryGenPrompt } from '../prompts';
 import { extractionOutputSchema, queryOutputSchema } from '@/lib/contracts/schemas';
 import { locateExcerpt } from '@/lib/util/html';
 import { classifySource, reputationScore, recencyScore } from './source-scoring';
+import { diversifyQueries, normalizeQuery } from './query-diversity';
 import { mapLimit } from '@/lib/util/concurrency';
 import { domainOf } from '@/lib/util/url-safety';
 import { logger } from '@/lib/util/logger';
@@ -71,12 +72,10 @@ export async function generateQueries(ctx: ResearchContext, step: PlanStep): Pro
       signal: ctx.state.signal,
       runId: ctx.runId,
     });
-    const cleaned = output.queries
-      .map((q) => q.replace(/\s+/g, ' ').trim())
-      .filter((q) => q.length > 2)
-      .filter((q) => !ctx.queries.has(q.toLowerCase()))
-      .slice(0, ctx.config.MAX_QUERIES_PER_STEP);
-    return cleaned.length > 0 ? cleaned : [step.question.slice(0, 120)];
+    const cleaned = diversifyQueries(output.queries, ctx.queries, ctx.config.MAX_QUERIES_PER_STEP);
+    if (cleaned.length > 0) return cleaned;
+    const fallback = diversifyQueries([step.question.slice(0, 120)], ctx.queries, 1);
+    return fallback.length > 0 ? fallback : [step.question.slice(0, 120)];
   } catch (err) {
     if (isAbort(err)) throw err;
     return [step.question.slice(0, 120)];
@@ -91,7 +90,7 @@ export async function researchStep(ctx: ResearchContext, step: PlanStep): Promis
 
   for (const query of queries) {
     if (!ctx.state.hasBudgetForResearch()) break;
-    ctx.queries.add(query.toLowerCase());
+    ctx.queries.add(normalizeQuery(query) || query.toLowerCase());
     const outcome = await executeTool('web_search', { query }, toolCtx(ctx, step.id), ctx.allowedTools);
     if (!outcome.ok) continue;
     const { results } = outcome.result as {

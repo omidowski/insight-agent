@@ -1,0 +1,87 @@
+{
+  "root": "/Users/nenadkalicanin/Documents/Projects/insight-agent",
+  "entries": [
+    {
+      "id": "fixr",
+      "name": "FIXR Debug Specialist",
+      "role": "fixr",
+      "source": "marketplace",
+      "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/agents/marketplace/fixr",
+      "soul": "You are FIXR — the debug specialist called when workers retry too often. - Gather as much information as possible before changing code. - Always start from ai -h and deepen with …",
+      "capabilities": "- exhaust-retry escalation: ActionFix briefs with full logs + ai -h catalog - ai -h / ai \u003cnamespace\u003e -h discovery of the entire CLI surface - ai pm logs / info …",
+      "tools": " ai -h ai pm info ai pm logs ai pm status ai pm tools ai doctor ai inbox ai context ai glossary ai tools ai swarm list",
+      "tags": [
+        "debug",
+        "logs",
+        "retry-fix",
+        "ai-help"
+      ],
+      "complete": true
+    },
+    {
+      "id": "hr-designer",
+      "name": "HR Agent Designer",
+      "role": "hr",
+      "source": "marketplace",
+      "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/agents/marketplace/hr-designer",
+      "soul": "You are HR — you design and scaffold new agent packs for the marketplace. - Create complete 12-file packs (SOUL…PROMPT) under .ai/agents/marketplace/. - Customize soul, capabil…",
+      "capabilities": "- ai agents init / show - ai setup agent (capabilitypack scaffold) - marketplace catalog authoring - ai agents learn — mint skill.md when a reusable design pa…",
+      "tools": " ai agents market ai agents show \u003cid\u003e ai setup agent ai agents learn --role hr --title … --pattern … ",
+      "tags": [
+        "design",
+        "scaffold",
+        "marketplace"
+      ],
+      "complete": true
+    },
+    {
+      "id": "pm-manager",
+      "name": "Project Manager",
+      "role": "pm",
+      "source": "marketplace",
+      "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/agents/marketplace/pm-manager",
+      "soul": "You are the KW Project Manager agent — orchestration only. - Own the 10-chat budget and team sizes 1–3 (ADR 0691 / 0694). - Spawn Worker teams for tickets; never implement tick…",
+      "capabilities": "- ai pm info / go / watch / logs / forget-stuck - ai workunit launch / status - budget: max 10 parallel · swarm ≤3 - never: edit product code, design new age…",
+      "tools": " ai pm info ai pm go \u003cworkunit\u003e ai pm watch --workunit \u003cslug\u003e ai pm logs ai workunit status \u003cslug\u003e ai agents learn --rol…",
+      "tags": [
+        "orchestration",
+        "budget-10",
+        "teams-3"
+      ],
+      "complete": true
+    },
+    {
+      "id": "tuv-controller",
+      "name": "TÜV Control Inspector",
+      "role": "tuv",
+      "source": "marketplace",
+      "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/agents/marketplace/tuv-controller",
+      "soul": "You are TÜV (TUV) — the independent control / inspection unit. - Be as strict as German TÜV: no rubber stamps, no “docs-only complete”. - Verify desires vs evidence: ticket…",
+      "capabilities": "- ai workunit status \u003cslug\u003e - ai pm status / info - read evidence/FINAL-VERIFY.md and ticket RELEASE capsules - run characterization harnesses under .cursor/spe…",
+      "tools": " ai workunit status ai pm status ai pm info ai agents roles ai agents learn --role tuv --title … --pattern … ",
+      "tags": [
+        "control",
+        "inspection",
+        "final-verify",
+        "strict"
+      ],
+      "complete": true
+    },
+    {
+      "id": "ticket-worker",
+      "name": "Ticket Worker",
+      "role": "worker",
+      "source": "marketplace",
+      "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/agents/marketplace/ticket-worker",
+      "soul": "You are a Ticket Worker — you implement exactly ONE claimed ticket. - TDD first; follow PROJECT.md; update not delete. - Report status to PM via swarm memory; do not redesign age…",
+      "capabilities": "- claim one open automated ticket - write tests → implement → update ticket status - use ai swarm memory append for findings - ai agents learn for reusable …",
+      "tools": " ai pm logs go test ./... pnpm test ai agents learn --role worker --title … --pattern … ",
+      "tags": [
+        "tdd",
+        "tickets",
+        "implementation"
+      ],
+      "complete": true
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "control_scan": [],
+  "intent": "Finish the next governed delivery slices for insight-agent: close residual absorb/host work, keep TDD, prefer update over delete, no credentials or cutover without an explicit gate.",
+  "ok": true,
+  "project_picture": {
+    "repo": "/Users/nenadkalicanin/Documents/Projects/insight-agent",
+    "structure": "insight-agent/\n├── .claude/\n│   └── launch.json\n├── .cursor/\n│   ├── adr/\n│   ├── brain/\n│   ├── prompts/\n│   └── testing/\n├── app/\n│   ├── api/\n│   ├── globals.css\n│   ├── layout.tsx\n│   └── page.tsx\n├── components/\n│   ├── activity/\n│   ├── chat/\n│   ├── sidebar/\n│   ├── sources/\n│   └── ChatApp.tsx\n├── lib/\n│   ├── agent/\n│   ├── api/\n│   ├── client/\n│   ├── config/\n│   ├── contracts/\n│   ├── db/\n│   ├── llm/\n│   ├── search/\n│   ├── tools/\n│   └── util/\n├── scripts/\n│   ├── check-llm.mjs\n│   └── set-key.mjs\n├── tests/\n│   ├── doubles/\n│   ├── helpers/\n│   ├── integration/\n│   ├── smoke/\n│   ├── unit/\n│   ├── global-setup.ts\n│   └── setup.ts\n├── .env.example\n├── .eslintrc.json\n├── .gitignore\n├── IMPLEMENTATION-LOG.md\n├── PROMPT-1-spec-generation.md\n├── PROMPT-2-implementation-loop.md\n├── README.md\n├── next.config.mjs\n├── package-lock.json\n├── package.json\n├── postcss.config.mjs\n├── tailwind.config.ts\n├── tsconfig.json\n├── vitest.config.ts\n└── vitest.smoke.config.ts\n",
+    "rag": {
+      "ready": false,
+      "store_path": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/rag/docs.jsonl",
+      "doc_count": 0,
+      "pack_ready": false,
+      "summary": "No RAG — run ai setup rag"
+    },
+    "project_md_excerpt": "",
+    "brain_index": null,
+    "has_project_md": false,
+    "root_markdown_violations": [
+      "IMPLEMENTATION-LOG.md",
+      "PROMPT-1-spec-generation.md",
+      "PROMPT-2-implementation-loop.md"
+    ],
+    "root_clutter": [
+      "specs"
+    ]
+  },
+  "slug": "insight-agent-aicli",
+  "ticket_count": 100
+}

@@ -1,0 +1,14 @@
+{
+  "created": "2026-09-09",
+  "dir": "01-insight-agent-ui-screenshot-improve",
+  "phases": null,
+  "prefix": "IAUS",
+  "slug": "insight-agent-ui-screenshot-improve",
+  "source_prompt": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.cursor/prompts/INSIGHT-AGENT-UI-SCREENSHOT-IMPROVE.md",
+  "source_sha256": "e9858ec22371e94fc72fa1c5f5d5d494d5695eb005adde03f9594a4eec7131a1",
+  "status": "planned",
+  "title": "Insight Agent — UI screenshot improve + ship",
+  "waves": [
+    "Screenshot each surface; analyze; red-circle annotate regions"
+  ]
+}

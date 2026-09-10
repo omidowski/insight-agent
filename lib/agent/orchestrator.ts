@@ -18,6 +18,7 @@ import type { ResearchContext } from './research/engine';
 import { applyCitations, renderSourceList, toCitationRows } from './research/citations';
 import { conversationPrompt, followupContextPrompt, synthesisPrompt, titlePrompt } from './prompts';
 import { followupOutputSchema, titleOutputSchema } from '@/lib/contracts/schemas';
+import { resolveConversationTitle } from './title';
 import { relevantExcerptText } from '@/lib/util/tokens';
 import { logger } from '@/lib/util/logger';
 import { isAbort, toAppError } from '@/lib/util/errors';
@@ -419,7 +420,6 @@ async function maybeTitle(
   const current = conversation?.title ?? 'Neuer Chat';
   if (current !== 'Neuer Chat') return;
   const answer = messageId ? repos.messages.get(messageId)?.content ?? '' : '';
-  const fallback = request.replace(/\s+/g, ' ').trim().slice(0, 48) || 'Neue Recherche';
   try {
     const prompt = titlePrompt(request, answer);
     const output = await llm.generateObject({
@@ -427,10 +427,13 @@ async function maybeTitle(
       schema: titleOutputSchema, schemaName: 'conversation_title',
       purpose: 'title', signal: state.signal, runId: state.runId,
     });
-    const title = output.title.replace(/\s+/g, ' ').trim().slice(0, 60);
-    repos.conversations.rename(conversationId, userId, title.length > 2 ? title : fallback);
+    repos.conversations.rename(
+      conversationId,
+      userId,
+      resolveConversationTitle(request, output.title),
+    );
   } catch {
-    repos.conversations.rename(conversationId, userId, fallback);
+    repos.conversations.rename(conversationId, userId, resolveConversationTitle(request, ''));
   }
 }
 

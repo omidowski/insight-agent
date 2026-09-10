@@ -3,6 +3,7 @@ import type { PlanStep, StepResult, StopReason } from '@/lib/contracts/domain';
 import type { ResearchContext } from './engine';
 import { researchStep } from './engine';
 import { detectConflicts, type DetectedConflict } from './conflicts';
+import { evaluateGaps } from './gaps';
 import { gapSteps } from '../planner';
 import { topoSort } from '@/lib/util/graph';
 import { mapLimit } from '@/lib/util/concurrency';
@@ -19,31 +20,7 @@ export interface LoopResult {
   plan: PlanStep[];
 }
 
-function evaluateGaps(
-  plan: PlanStep[],
-  results: Map<string, StepResult>,
-  minSources: number,
-  minConfidence: number,
-): string[] {
-  const gaps: string[] = [];
-  const seen = new Set<string>();
-  const add = (question: string) => {
-    const key = question.trim().toLowerCase();
-    if (seen.has(key)) return;
-    seen.add(key);
-    gaps.push(question);
-  };
-  for (const step of plan) {
-    const result = results.get(step.id);
-    if (!result || result.items.length === 0) {
-      add(step.question);
-      continue;
-    }
-    const distinct = new Set(result.sourceIds).size;
-    if (distinct < minSources || result.confidence < minConfidence) add(step.question);
-  }
-  return gaps;
-}
+export { evaluateGaps } from './gaps';
 
 export async function runResearchLoop(ctx: ResearchContext, initialPlan: PlanStep[]): Promise<LoopResult> {
   let plan = [...initialPlan];

@@ -1,0 +1,15 @@
+{
+  "skills": [
+    {
+      "file": "saas-mvp-delivery.md",
+      "id": "seed-saas-mvp-delivery",
+      "summary": "Vertical slices, org-scoped data, tests first.",
+      "tags": [
+        "seed",
+        "setup"
+      ],
+      "title": "SaaS MVP Delivery"
+    }
+  ],
+  "version": 1
+}

@@ -1,0 +1,50 @@
+{
+  "version": 1,
+  "purposes": {
+    "agent_chat": {
+      "corpora": [
+        "session",
+        "product"
+      ],
+      "top_k": 8
+    },
+    "coding": {
+      "corpora": [
+        "coding",
+        "decisions",
+        "product"
+      ],
+      "exclude": [
+        "session",
+        "telegram",
+        "video"
+      ],
+      "top_k": 12,
+      "inject": [
+        "rules",
+        "skills:matching"
+      ]
+    },
+    "pm": {
+      "corpora": [
+        "tickets",
+        "decisions",
+        "docs"
+      ],
+      "top_k": 10
+    },
+    "reels": {
+      "corpora": [
+        "video"
+      ],
+      "top_k": 6
+    },
+    "triage_explain": {
+      "corpora": [
+        "docs",
+        "product"
+      ],
+      "top_k": 5
+    }
+  }
+}

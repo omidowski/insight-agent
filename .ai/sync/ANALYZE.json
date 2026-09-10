@@ -1,0 +1,30 @@
+{
+  "generated_at": "2026-09-09T07:13:55Z",
+  "root": "/Users/nenadkalicanin/Documents/Projects/insight-agent",
+  "slug": "insight-agent",
+  "has_project_md": true,
+  "has_agents_md": false,
+  "languages": [
+    "javascript"
+  ],
+  "markers": [
+    "dot-ai",
+    "package.json"
+  ],
+  "capability_hints": [
+    "ai-workspace",
+    "node-tooling"
+  ],
+  "entry_points": [
+    ".ai",
+    "PROJECT.md",
+    "package.json"
+  ],
+  "risks": [
+    "missing AGENTS.md"
+  ],
+  "counts": {
+    "dot-ai": 1,
+    "package.json": 1
+  }
+}

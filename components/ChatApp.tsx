@@ -10,7 +10,11 @@ import { ActivityCard } from '@/components/activity/ActivityCard';
 import { SourcesPanel } from '@/components/sources/SourcesPanel';
 import { Markdown } from '@/components/chat/Markdown';
 
-
+const EXAMPLES = [
+  'Recherchiere aktuelle Statistiken über den Fußballspieler Jamal Musiala.',
+  'Vergleiche den Umsatz der wertvollsten europäischen Fußballvereine und erstelle eine Tabelle.',
+  'Was ist ein Vektor-Embedding?',
+];
 
 interface ModelInfo {
   id: string;
@@ -29,6 +33,7 @@ const PROVIDER_LABEL: Record<string, string> = {
   openai: 'OpenAI',
   nvidia: 'NVIDIA NIM',
   compatible: 'OpenAI-kompatibel',
+  hermes: 'Hermes',
   none: 'nicht konfiguriert',
 };
 
@@ -70,6 +75,10 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
   useEffect(() => {
     void refreshConversations();
   }, [refreshConversations]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
 
   // Modellkatalog des aktiven Anbieters laden; letzte Wahl aus dem Browser wiederherstellen.
   useEffect(() => {
@@ -335,7 +344,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
   return (
     <div className="flex h-dvh overflow-hidden">
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-64 transition-transform lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-30 w-72 transition-transform lg:static lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
@@ -358,7 +367,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
       )}
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="flex items-center gap-2 border-b border-border px-3 py-2.5">
+        <header className="flex items-center gap-2 border-b border-border/80 bg-surface/70 px-3 py-2.5 backdrop-blur-md">
           <button
             type="button"
             onClick={() => setSidebarOpen(true)}
@@ -367,7 +376,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
           >
             ☰
           </button>
-          <h1 className="truncate text-sm font-semibold">Autonomous Intelligence</h1>
+          <h1 className="font-display truncate text-base font-semibold tracking-tight">Insight Agent</h1>
           {configured && (
             <span className="hidden rounded-full border border-border px-2 py-0.5 text-[11px] text-muted sm:inline">
               {PROVIDER_LABEL[provider] ?? provider}
@@ -412,30 +421,59 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
         </header>
 
         {!configured && (
-          <div className="border-b border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm">
-            <p className="font-medium">Kein Sprachmodell konfiguriert.</p>
-            <p className="mt-1 text-muted">
-              Hinterlege einen Schlüssel mit <code>npm run set-key</code> (OpenAI oder NVIDIA) und starte
-              die App neu. Diese Anwendung erzeugt keine simulierten Antworten.
+          <div className="border-b border-border/80 bg-surface/90 px-4 py-2.5 text-sm backdrop-blur-md">
+            <p className="font-medium text-fg">Modell verbinden</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted">
+              <code className="rounded bg-bg px-1 py-0.5">npm run set-key</code> für OpenAI/NVIDIA, oder{' '}
+              <code className="rounded bg-bg px-1 py-0.5">LLM_PROVIDER=hermes</code> in{' '}
+              <code className="rounded bg-bg px-1 py-0.5">.env.local</code> — keine simulierten Antworten.
             </p>
           </div>
         )}
         {configured && !searchConfigured && (
-          <div className="border-b border-border bg-surface px-4 py-2 text-xs text-muted">
-            Websuche nicht konfiguriert — Rechercheaufgaben benötigen <code>BRAVE_API_KEY</code> oder{' '}
-            <code>TAVILY_API_KEY</code> in <code>.env.local</code>.
+          <div className="border-b border-border bg-surface/80 px-4 py-2 text-xs text-muted">
+            Websuche nicht konfiguriert — Recherche braucht <code>BRAVE_API_KEY</code>,{' '}
+            <code>TAVILY_API_KEY</code> oder Hermes-Suche.
           </div>
         )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto">
-          <div className="mx-auto w-full max-w-3xl px-4 py-6">
+          <div className="mx-auto flex w-full max-w-3xl flex-col justify-center px-4 py-6 min-h-full">
             {messages.length === 0 && (
-              <div className="pt-10">
-                <h2 className="text-lg font-semibold">Womit soll ich anfangen?</h2>
-                <p className="mt-1 text-sm text-muted">
-                  Stelle eine normale Frage oder gib eine Rechercheaufgabe — der Agent plant, sucht, liest Quellen
-                  und belegt jede Aussage.
+              <div className="relative overflow-hidden rounded-3xl px-1 pb-2 pt-4 sm:pt-8">
+                <div
+                  aria-hidden
+                  className="pointer-events-none absolute inset-0 -z-10 rounded-3xl opacity-90"
+                  style={{
+                    background:
+                      'radial-gradient(80% 70% at 20% 10%, rgb(var(--accent) / 0.14), transparent 60%), radial-gradient(70% 60% at 90% 30%, rgb(var(--glow) / 0.18), transparent 55%)',
+                  }}
+                />
+                <p className="hero-rise font-display text-4xl font-extrabold tracking-tight text-fg sm:text-5xl md:text-[3.25rem]">
+                  Insight Agent
                 </p>
+                <h2 className="hero-rise hero-rise-delay-1 mt-3 max-w-xl text-lg font-semibold tracking-tight text-fg sm:text-xl">
+                  Recherche, die jede Aussage belegt.
+                </h2>
+                <p className="hero-rise hero-rise-delay-2 mt-2 max-w-lg text-sm text-muted">
+                  Frage stellen oder Rechercheauftrag geben — Planung, Quellen, Citations.
+                </p>
+                <ul className="hero-rise hero-rise-delay-3 mt-6 grid gap-2 sm:grid-cols-1">
+                  {EXAMPLES.map((example) => (
+                    <li key={example}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setInput(example);
+                          requestAnimationFrame(() => textareaRef.current?.focus());
+                        }}
+                        className="w-full rounded-2xl border border-border bg-surface px-4 py-3 text-left text-sm text-fg shadow-[0_1px_0_rgb(var(--border)/0.35)] transition hover:border-accent hover:shadow-[0_0_0_1px_rgb(var(--accent)/0.35)]"
+                      >
+                        {example}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
 
@@ -489,7 +527,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
           </div>
         </div>
 
-        <div className="border-t border-border bg-bg px-4 py-3">
+        <div className="border-t border-border/80 bg-bg/80 px-4 py-3 backdrop-blur-md">
           <div className="mx-auto flex w-full max-w-3xl items-end gap-2">
             <textarea
               ref={textareaRef}
@@ -504,13 +542,13 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
               rows={1}
               placeholder="Frage stellen oder Rechercheauftrag geben …"
               aria-label="Nachricht"
-              className="max-h-48 min-h-[44px] flex-1 resize-y rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm outline-none focus:border-accent"
+              className="max-h-48 min-h-[44px] flex-1 resize-y rounded-2xl border border-border bg-surface/95 px-3.5 py-2.5 text-sm outline-none transition focus:border-accent"
             />
             {running ? (
               <button
                 type="button"
                 onClick={() => void stop()}
-                className="h-11 shrink-0 rounded-xl border border-border px-4 text-sm font-medium hover:bg-surface"
+                className="h-11 shrink-0 rounded-2xl border border-border px-4 text-sm font-medium hover:bg-surface"
               >
                 Stopp
               </button>
@@ -519,7 +557,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
                 type="button"
                 onClick={() => void send(input)}
                 disabled={input.trim().length === 0 || !configured}
-                className="h-11 shrink-0 rounded-xl bg-accent px-4 text-sm font-medium text-white disabled:opacity-40"
+                className="h-11 shrink-0 rounded-2xl bg-accent px-5 text-sm font-semibold text-white shadow-[0_10px_28px_rgb(var(--accent)/0.35)] transition enabled:hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-45"
               >
                 Senden
               </button>
@@ -533,7 +571,7 @@ export default function ChatApp({ configured, searchConfigured, provider, showCo
 
       {sources.length > 0 && (
         <aside
-          className={`fixed inset-y-0 right-0 z-30 w-80 border-l border-border bg-bg transition-transform xl:static xl:translate-x-0 ${
+          className={`panel-in fixed inset-y-0 right-0 z-30 w-80 border-l border-border bg-surface/95 backdrop-blur-md transition-transform xl:static xl:translate-x-0 ${
             panelOpen ? 'translate-x-0' : 'translate-x-full xl:translate-x-0'
           }`}
         >
