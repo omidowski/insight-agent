@@ -3,9 +3,9 @@ id: 22-tool-file-search-retrieval
 title: File Search & Retrieval
 phase: 7
 milestone: V2
-status: draft
+status: done
 depends_on: [18-tool-system-core, 32-file-upload-and-documents]
-provides: [file_search]
+provides: [vector_search, file_search]
 complexity: L
 ---
 

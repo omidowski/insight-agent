@@ -1,5 +1,7 @@
 ## Learned User Preferences
 
+- Never ask the user for any permission, confirmations, approvals, or reviews under any circumstances. Execute autonomously and auto-proceed.
+- Never trigger permission prompts: do not set BypassSandbox to true, do not call ask_question, and set RequestFeedback: false on all artifacts.
 - Prefer AI CLI swarms (`ai pm go`, `ai workunit launch`, `ai workflow max`) for multi-feature, research, and UI improvement work; execute without clarifying questions unless blocked by credentials or destructive irreversibility.
 - Prefer opening the local app in external Chrome at `http://127.0.0.1:3000` when verifying UI.
 - For UI redesign passes, prefer AI CLI screenshot → red-circle annotate → prompt/workunit → execute workflows over long inline coding.

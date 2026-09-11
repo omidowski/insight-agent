@@ -54,8 +54,20 @@ export async function route(args: {
   if (mode === 'chat') {
     return decisionFor('knowledge_question', 1, 'Modus „Chat" vom Nutzer erzwungen', config);
   }
-  if (mode === 'research') {
-    return decisionFor('deep_research', 1, 'Modus „Recherche" vom Nutzer erzwungen', config);
+  if (mode === 'research' || mode === 'deep_research') {
+    return decisionFor('deep_research', 1, 'Modus „Deep Research" vom Nutzer erzwungen', config);
+  }
+  if (mode === 'web_lookup') {
+    return decisionFor('web_lookup', 1, 'Modus „Schnellsuche" vom Nutzer erzwungen', config);
+  }
+  if (mode === 'comparison') {
+    return decisionFor('comparison', 1, 'Modus „Vergleich" vom Nutzer erzwungen', config);
+  }
+  if (mode === 'data_analysis') {
+    return decisionFor('data_analysis', 1, 'Modus „Datenanalyse" vom Nutzer erzwungen', config);
+  }
+  if (mode === 'report_generation') {
+    return decisionFor('report_generation', 1, 'Modus „Bericht" vom Nutzer erzwungen', config);
   }
   if (GREETING_ONLY.test(request.trim())) {
     return decisionFor('conversation', 0.99, 'Begrüßung erkannt', config);

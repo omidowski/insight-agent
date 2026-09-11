@@ -1,0 +1,12 @@
+{
+  "id": "05069dab",
+  "url": "http://127.0.0.1:3000/",
+  "root": "/Users/nenadkalicanin/Documents/Projects/insight-agent",
+  "intent": "Insight Agent empty chat hero brand-first rewrite",
+  "created": "2026-09-09T07:37:07.892573Z",
+  "updated": "2026-09-09T07:37:07.89341Z",
+  "steps": [
+    "created",
+    "start"
+  ]
+}

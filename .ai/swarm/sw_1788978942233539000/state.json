@@ -1,0 +1,21 @@
+{
+  "id": "sw_1788978942233539000",
+  "goal": "ROLE=tuv-controller. WORKSPACE maintain. Work unit insight-agent-ui-screenshot-improve.\nStrict TÜV inspection: ai workunit status insight-agent-ui-screenshot-improve; read evidence/FINAL-VERIFY.md; run evidence harnesses.\nUse ai rag query --purpose decisions for ADR checks. Pass only with proof. Fail with concrete gaps. No rubber stamps. No product implementation. No questions.",
+  "backend": "local",
+  "local_cli": "claude",
+  "created_at": "2026-09-09T18:35:42.234075Z",
+  "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788978942233539000",
+  "memory": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788978942233539000/memory.jsonl",
+  "workers": [
+    {
+      "id": "w1",
+      "task": "Analyze current state and constraints for: ROLE=tuv-controller. WORKSPACE maintain. Work unit insight-agent-ui-screenshot-improve.\nStrict TÜV inspection: ai workunit status insight-agent-ui-screenshot-improve; read evidence/FINAL-VERIFY.md; run evidence harnesses.\nUse ai rag query --purpose decisions for ADR checks. Pass only with proof. Fail with concrete gaps. No rubber stamps. No product implementation. No questions.",
+      "status": "running",
+      "pid": 84602,
+      "cmd": "/opt/homebrew/bin/claude -p You are worker w1 (w1) in ai swarm sw_1788978942233539000.\nShared goal: ROLE=tuv-controller. WORKSPACE maintain. Work unit insight-agent-ui-screenshot-improve.\nStrict TÜV inspection: ai workunit status insight-agent-ui-screenshot-improve; read evidence/FINAL-VERIFY.md; run evidence harnesses.\nUse ai rag query --purpose decisions for ADR checks. Pass only with proof. Fail with concrete gaps. No rubber stamps. No product implementation. No questions.\nYour task: Analyze current state and constraints for: ROLE=tuv-controller. WORKSPACE maintain. Work unit insight-agent-ui-screenshot-improve.\nStrict TÜV inspection: ai workunit status insight-agent-ui-screenshot-improve; read evidence/FINAL-VERIFY.md; run evidence harnesses.\nUse ai rag query --purpose decisions for ADR checks. Pass only with proof. Fail with concrete gaps. No rubber stamps. No product implementation. No questions.\nRead the nearest PROJECT.md and active work-unit tickets.\nClaim one highest-priority unclaimed, non-destructive task that does not overlap running PM prompts.\nUse TDD, record the claim and findings in swarm memory, and complete or verify that bounded task.\nShared memory file: /Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788978942233539000/memory.jsonl\nRead prior notes with: ai swarm memory list --id sw_1788978942233539000\nAppend findings with: ai swarm memory append --id sw_1788978942233539000 --agent w1 --kind finding -- \"your note\"\nRecord your claim in shared memory before making changes, then append findings as you verify the work.\nStop and record a blocker for credentials, destructive actions, or production cutover.\nDo not ask routine questions: infer the safest reversible default.\nDo not overlap running PM prompts.\nPM RECOVERY: Re-read existing evidence, avoid repeating failed steps, choose the safest reversible approach, and continue.\nUse ai CLI for tickets/intents where useful. Coordinate only through shared memory and tickets. Do not invent secrets.\nPROJECT.md is SSOT. TDD: failing tests first. Prefer update over delete."
+    }
+  ],
+  "extra_env": [
+    "HOME=/Users/nenadkalicanin"
+  ]
+}

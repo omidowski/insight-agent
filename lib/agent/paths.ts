@@ -10,7 +10,7 @@ export interface PathConfig {
   budgetScale: number;
 }
 
-const RESEARCH_TOOLS: ToolName[] = ['web_search', 'open_url', 'extract_content', 'search_in_page'];
+const RESEARCH_TOOLS: ToolName[] = ['web_search', 'open_url', 'extract_content', 'search_in_page', 'vector_search'];
 const FULL_TOOLS: ToolName[] = [...RESEARCH_TOOLS, 'calculator', 'datetime'];
 
 export const PATHS: Record<TaskType, PathConfig> = {

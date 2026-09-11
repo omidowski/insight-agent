@@ -2,7 +2,7 @@
 import type { Repositories } from '@/lib/db/repositories';
 import type { AppConfig } from '@/lib/config/env';
 import type { LLMProvider, UsageRecord } from '@/lib/llm/provider';
-import type { PlanStep, RunMode, StopReason } from '@/lib/contracts/domain';
+import type { PlanStep, ResearchOptions, RunMode, StopReason } from '@/lib/contracts/domain';
 import { getLLMProvider } from '@/lib/llm';
 import { withModel } from '@/lib/llm/with-model';
 import { getSearchProvider } from '@/lib/search';
@@ -31,6 +31,7 @@ export interface ExecuteOptions {
   config?: AppConfig;
   llm?: LLMProvider;
   search?: SearchProvider;
+  researchOptions?: ResearchOptions;
 }
 
 const DELTA_FLUSH_MS = 50;
@@ -48,6 +49,17 @@ export async function executeRun(options: ExecuteOptions): Promise<void> {
   const state = new RunStateManager(run.id, run.conversationId, run.budgets, repos, emitter);
   registerRun(state);
   state.startCancelWatch();
+
+  const researchOptions = options.researchOptions ?? run.researchOptions ?? undefined;
+  if (researchOptions?.depth === 'quick') {
+    state.budgets.maxIterations = Math.min(state.budgets.maxIterations, 2);
+    state.budgets.maxSearches = Math.min(state.budgets.maxSearches, 2);
+    state.budgets.maxSources = Math.min(state.budgets.maxSources, 3);
+  } else if (researchOptions?.depth === 'deep') {
+    state.budgets.maxIterations = Math.max(state.budgets.maxIterations, 6);
+    state.budgets.maxSearches = Math.max(state.budgets.maxSearches, 8);
+    state.budgets.maxSources = Math.max(state.budgets.maxSources, 10);
+  }
 
   const usageSink = (usage: UsageRecord) => {
     repos.usage.record({
@@ -126,6 +138,7 @@ export async function executeRun(options: ExecuteOptions): Promise<void> {
         request, taskType: decision.taskType,
         context: history.slice(-2).map((h) => `${h.role}: ${h.text.slice(0, 200)}`),
         llm, config, signal: state.signal, runId: run.id,
+        options: run.researchOptions ?? undefined,
       });
       repos.steps.createMany(run.id, plan);
       repos.runs.update(run.id, { plan });
@@ -142,6 +155,7 @@ export async function executeRun(options: ExecuteOptions): Promise<void> {
         cache: new Map<string, unknown>(),
         allowedTools: decision.allowedTools,
         queries: new Set<string>(),
+        researchOptions: run.researchOptions ?? undefined,
       };
 
       let loop = await runResearchLoop(ctx, plan);
@@ -186,6 +200,7 @@ export async function executeRun(options: ExecuteOptions): Promise<void> {
         conversationId: run.conversationId, messageId: assistant.id,
         plan: loop.plan.map((s) => `${s.seq}. ${s.title}: ${s.question}`),
         conflictText, gapText, sourceScope: 'run',
+        options: run.researchOptions ?? undefined,
       });
     }
 
@@ -234,6 +249,10 @@ export async function executeRun(options: ExecuteOptions): Promise<void> {
       logger.error('run failed', { module: 'orchestrator', runId: run.id, code: error.code, message: error.message });
       emitter.emit('run.failed', { code: error.code, userMessage: error.userMessage });
     }
+    const conversation = repos.conversations.get(run.conversationId, run.userId);
+    if (conversation && (conversation.title === 'Neuer Chat' || !conversation.title.trim())) {
+      repos.conversations.rename(run.conversationId, run.userId, resolveConversationTitle(request, ''));
+    }
   } finally {
     state.stopCancelWatch();
     unregisterRun(run.id);
@@ -278,6 +297,12 @@ async function runChatPath(args: {
 }): Promise<void> {
   args.state.setStatus('synthesizing');
   const prompt = conversationPrompt(args.request, args.history);
+  args.repos.vectors?.indexer.indexDynamicPrompt({
+    runId: args.runId,
+    purpose: 'conversation',
+    system: prompt.system,
+    userInput: args.request,
+  }).catch(() => {});
   let buffer = '';
   let pending = '';
   let lastFlush = Date.now();
@@ -315,6 +340,7 @@ async function synthesize(args: {
   conflictText: string;
   gapText: string;
   sourceScope: 'run' | 'conversation';
+  options?: ResearchOptions;
 }): Promise<void> {
   const allSources = args.sourceScope === 'run'
     ? args.repos.sources.listByRun(args.runId)
@@ -343,7 +369,15 @@ async function synthesize(args: {
     sources: sourceBlocks,
     conflicts: args.conflictText,
     gaps: args.gapText,
+    options: args.options,
   });
+
+  args.repos.vectors?.indexer.indexDynamicPrompt({
+    runId: args.runId,
+    purpose: 'synthesis',
+    system: prompt.system,
+    userInput: args.request,
+  }).catch(() => {});
 
   let buffer = '';
   let pending = '';
@@ -418,7 +452,8 @@ async function maybeTitle(
 ): Promise<void> {
   const conversation = repos.conversations.get(conversationId, userId);
   const current = conversation?.title ?? 'Neuer Chat';
-  if (current !== 'Neuer Chat') return;
+  const fallback = resolveConversationTitle(request, '');
+  if (current !== 'Neuer Chat' && current !== fallback && current.trim().length > 0) return;
   const answer = messageId ? repos.messages.get(messageId)?.content ?? '' : '';
   try {
     const prompt = titlePrompt(request, answer);

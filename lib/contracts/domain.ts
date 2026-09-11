@@ -29,15 +29,44 @@ export const messageStatusSchema = z.enum(['complete', 'streaming', 'failed', 'c
 export type MessageStatus = z.infer<typeof messageStatusSchema>;
 
 export const toolNameSchema = z.enum([
-  'web_search', 'open_url', 'extract_content', 'search_in_page', 'calculator', 'datetime',
+  'web_search', 'open_url', 'extract_content', 'search_in_page', 'calculator', 'datetime', 'vector_search',
 ]);
 export type ToolName = z.infer<typeof toolNameSchema>;
 
-export const runModeSchema = z.enum(['auto', 'chat', 'research']);
+export const runModeSchema = z.enum([
+  'auto',
+  'chat',
+  'research',
+  'deep_research',
+  'web_lookup',
+  'comparison',
+  'data_analysis',
+  'report_generation',
+]);
 export type RunMode = z.infer<typeof runModeSchema>;
 
 export const stopReasonSchema = z.enum(['answered', 'budget', 'saturation', 'cancelled', 'error']);
 export type StopReason = z.infer<typeof stopReasonSchema>;
+
+export const researchDepthSchema = z.enum(['quick', 'standard', 'deep']);
+export type ResearchDepth = z.infer<typeof researchDepthSchema>;
+
+export const researchTimeframeSchema = z.enum(['all', 'day', 'week', 'month', 'year']);
+export type ResearchTimeframe = z.infer<typeof researchTimeframeSchema>;
+
+export const researchOutputFormatSchema = z.enum([
+  'standard', 'detailed_report', 'comparison_table', 'bullet_points',
+]);
+export type ResearchOutputFormat = z.infer<typeof researchOutputFormatSchema>;
+
+export interface ResearchOptions {
+  depth?: ResearchDepth;
+  timeframe?: ResearchTimeframe;
+  focusDomains?: string[];
+  excludeDomains?: string[];
+  aspects?: string;
+  outputFormat?: ResearchOutputFormat;
+}
 
 export interface RunBudgets {
   maxIterations: number;
@@ -128,6 +157,8 @@ export interface Run {
   finishedAt: string | null;
   /** Vom Nutzer gewähltes Modell für diesen Run (null = Standard). */
   modelOverride: string | null;
+  /** Vom Nutzer gewählte Recherche-Optionen (null = Standard). */
+  researchOptions?: ResearchOptions | null;
 }
 
 export interface SourceRecord {

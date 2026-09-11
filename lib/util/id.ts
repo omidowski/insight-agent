@@ -30,7 +30,7 @@ export function ulid(now: number = Date.now()): string {
 }
 
 export type IdPrefix =
-  | 'usr' | 'cnv' | 'msg' | 'run' | 'stp' | 'evt' | 'tcl' | 'src' | 'exc' | 'cit' | 'cfl' | 'usg';
+  | 'usr' | 'cnv' | 'msg' | 'run' | 'stp' | 'evt' | 'tcl' | 'src' | 'exc' | 'cit' | 'cfl' | 'usg' | 'vec';
 
 export function newId(prefix: IdPrefix, now?: number): string {
   return `${prefix}_${ulid(now)}`;

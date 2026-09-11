@@ -1,0 +1,21 @@
+{
+  "id": "sw_1788938092320482000",
+  "goal": "Continue work unit \"insight-agent-aicli-research-rewrite\". Open automated tickets (skip human_gate): IAAR-0101 (planned), IAAR-0201 (planned), IAAR-0301 (planned).\n\nClaim ONE unfinished non-overlapping ticket; TDD; reversible only; only Cursor agent,\nCodex, or Claude. Update that ticket status when done. No credentials, deletions,\ngit topology changes, commits, or human-gate tickets (e.g. URM-1001).",
+  "backend": "cursor",
+  "local_cli": "agent",
+  "created_at": "2026-09-09T07:14:52.320755Z",
+  "dir": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788938092320482000",
+  "memory": "/Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788938092320482000/memory.jsonl",
+  "workers": [
+    {
+      "id": "w1",
+      "task": "Analyze current state and constraints for: Continue work unit \"insight-agent-aicli-research-rewrite\". Open automated tickets (skip human_gate): IAAR-0101 (planned), IAAR-0201 (planned), IAAR-0301 (planned).\n\nClaim ONE unfinished non-overlapping ticket; TDD; reversible only; only Cursor agent,\nCodex, or Claude. Update that ticket status when done. No credentials, deletions,\ngit topology changes, commits, or human-gate tickets (e.g. URM-1001).",
+      "status": "completed",
+      "pid": 38954,
+      "cmd": "/Users/nenadkalicanin/.local/bin/agent -p --trust --force --output-format text You are worker w1 (w1) in ai swarm sw_1788938092320482000.\nShared goal: Continue work unit \"insight-agent-aicli-research-rewrite\". Open automated tickets (skip human_gate): IAAR-0101 (planned), IAAR-0201 (planned), IAAR-0301 (planned).\n\nClaim ONE unfinished non-overlapping ticket; TDD; reversible only; only Cursor agent,\nCodex, or Claude. Update that ticket status when done. No credentials, deletions,\ngit topology changes, commits, or human-gate tickets (e.g. URM-1001).\nYour task: Analyze current state and constraints for: Continue work unit \"insight-agent-aicli-research-rewrite\". Open automated tickets (skip human_gate): IAAR-0101 (planned), IAAR-0201 (planned), IAAR-0301 (planned).\n\nClaim ONE unfinished non-overlapping ticket; TDD; reversible only; only Cursor agent,\nCodex, or Claude. Update that ticket status when done. No credentials, deletions,\ngit topology changes, commits, or human-gate tickets (e.g. URM-1001).\nRead the nearest PROJECT.md and active work-unit tickets.\nClaim one highest-priority unclaimed, non-destructive task that does not overlap running PM prompts.\nUse TDD, record the claim and findings in swarm memory, and complete or verify that bounded task.\nShared memory file: /Users/nenadkalicanin/Documents/Projects/insight-agent/.ai/swarm/sw_1788938092320482000/memory.jsonl\nRead prior notes with: ai swarm memory list --id sw_1788938092320482000\nAppend findings with: ai swarm memory append --id sw_1788938092320482000 --agent w1 --kind finding -- \"your note\"\nRecord your claim in shared memory before making changes, then append findings as you verify the work.\nStop and record a blocker for credentials, destructive actions, or production cutover.\nDo not ask routine questions: infer the safest reversible default.\nDo not overlap running PM prompts.\nPM RECOVERY: Re-read existing evidence, avoid repeating failed steps, choose the safest reversible approach, and continue.\nUse ai CLI for tickets/intents where useful. Coordinate only through shared memory and tickets. Do not invent secrets.\nPROJECT.md is SSOT. TDD: failing tests first. Prefer update over delete."
+    }
+  ],
+  "extra_env": [
+    "HOME=/Users/nenadkalicanin"
+  ]
+}

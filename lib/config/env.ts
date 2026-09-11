@@ -13,13 +13,13 @@ const envSchema = z.object({
   OPENAI_MODEL_MAIN: z.string().default('gpt-5-mini'),
   NVIDIA_API_KEY: z.string().trim().optional(),
   NVIDIA_BASE_URL: z.string().default('https://integrate.api.nvidia.com/v1'),
-  NVIDIA_MODEL_FAST: z.string().default('meta/llama-3.3-70b-instruct'),
-  NVIDIA_MODEL_MAIN: z.string().default('meta/llama-3.3-70b-instruct'),
+  NVIDIA_MODEL_FAST: z.string().default('nvidia/nemotron-3.5-lightning-30b-a3b'),
+  NVIDIA_MODEL_MAIN: z.string().default('nvidia/nemotron-3.5-lightning-30b-a3b'),
   // Hermes-Agent-CLI als Anbieter: die Zugangsdaten liegen dann in ~/.hermes/.env (ADR-015).
   HERMES_BIN: z.string().default('hermes'),
   HERMES_PROVIDER: z.string().default('nvidia'),
-  HERMES_MODEL_FAST: z.string().default('meta/llama-3.3-70b-instruct'),
-  HERMES_MODEL_MAIN: z.string().default('meta/llama-3.3-70b-instruct'),
+  HERMES_MODEL_FAST: z.string().default('nvidia/nemotron-3.5-lightning-30b-a3b'),
+  HERMES_MODEL_MAIN: z.string().default('nvidia/nemotron-3.5-lightning-30b-a3b'),
   /** Wurzelverzeichnis der Hermes-Installation — dort liegt die Python-Umgebung für die Websuche. */
   HERMES_HOME: z.string().default(''),
   /** Suchrückgriff in Hermes: 'ddgs' braucht keinen Schlüssel. */

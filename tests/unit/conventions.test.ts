@@ -87,7 +87,7 @@ describe('Spec 07 — Prompts', () => {
   it('AC-07-01: jeder System-Prompt enthält die Untrusted-Content-Regel', () => {
     for (const prompt of prompts) {
       expect(prompt.system).toContain(UNTRUSTED_RULE);
-      expect(prompt.version).toBe('v1');
+      expect(['v1', 'v2']).toContain(prompt.version);
     }
   });
 
@@ -105,5 +105,11 @@ describe('Spec 07 — Prompts', () => {
     expect(prompt.system).toContain('[2]');
     expect(prompt.system).toContain('Mittelwert');
     expect(prompt.system).toContain('Offene Punkte');
+  });
+
+  it('AC-07-04: conversationPrompt weist an, bei Begrüßung nach Suchen oder Sagen zu fragen', () => {
+    const prompt = conversationPrompt('Hallo', []);
+    expect(prompt.system).toContain('suchen');
+    expect(prompt.system).toContain('sagen');
   });
 });

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { route, needsLiveLookup } from '@/lib/agent/router';
+import type { RunMode } from '@/lib/contracts/domain';
 import { FakeLLMProvider } from '../doubles/fake-llm';
 import { getConfig, resetConfig } from '@/lib/config/env';
 import type { LLMProvider, ObjectRequest } from '@/lib/llm/provider';
@@ -8,7 +9,7 @@ resetConfig();
 const config = getConfig();
 const llm = new FakeLLMProvider();
 
-async function classify(request: string, mode: 'auto' | 'chat' | 'research' = 'auto') {
+async function classify(request: string, mode: RunMode = 'auto') {
   return route({ request, history: [], mode, llm, config });
 }
 
@@ -46,6 +47,26 @@ describe('Spec 13 — Request Router', () => {
     expect(chat.allowedTools).toHaveLength(0);
     const research = await classify('Hallo', 'research');
     expect(research.taskType).toBe('deep_research');
+
+    const deep = await classify('Hallo', 'deep_research');
+    expect(deep.taskType).toBe('deep_research');
+    expect(deep.needsResearch).toBe(true);
+
+    const lookup = await classify('Hallo', 'web_lookup');
+    expect(lookup.taskType).toBe('web_lookup');
+    expect(lookup.needsResearch).toBe(true);
+
+    const compare = await classify('Hallo', 'comparison');
+    expect(compare.taskType).toBe('comparison');
+    expect(compare.needsResearch).toBe(true);
+
+    const data = await classify('Hallo', 'data_analysis');
+    expect(data.taskType).toBe('data_analysis');
+    expect(data.needsResearch).toBe(true);
+
+    const report = await classify('Hallo', 'report_generation');
+    expect(report.taskType).toBe('report_generation');
+    expect(report.needsResearch).toBe(true);
   });
 
   it('AC-13-02: geringe Sicherheit führt zum günstigeren Pfad', async () => {

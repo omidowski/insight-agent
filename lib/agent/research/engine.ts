@@ -2,7 +2,7 @@
 import type { LLMProvider } from '@/lib/llm/provider';
 import type { AppConfig } from '@/lib/config/env';
 import type { Repositories } from '@/lib/db/repositories';
-import type { ExtractionItem, PlanStep, StepResult, ToolName } from '@/lib/contracts/domain';
+import type { ExtractionItem, PlanStep, ResearchOptions, StepResult, ToolName } from '@/lib/contracts/domain';
 import type { EventEmitterLike } from '../events';
 import type { RunStateManager } from '../state';
 import type { ToolContext } from '@/lib/tools/types';
@@ -33,6 +33,8 @@ export interface ResearchContext {
   allowedTools: ToolName[];
   /** Bereits gestellte Suchanfragen (normalisiert) — verhindert Wiederholungen. */
   queries: Set<string>;
+  /** Optionale Recherche-Vorgaben des Nutzers (Domains, Zeithorizont, Aspekte, etc.). */
+  researchOptions?: ResearchOptions;
 }
 
 function toolCtx(ctx: ResearchContext, stepId: string | null): ToolContext {
@@ -60,7 +62,7 @@ interface Candidate {
 }
 
 export async function generateQueries(ctx: ResearchContext, step: PlanStep): Promise<string[]> {
-  const prompt = queryGenPrompt(step.question, Array.from(ctx.queries));
+  const prompt = queryGenPrompt(step.question, Array.from(ctx.queries), ctx.researchOptions);
   try {
     const output = await ctx.llm.generateObject({
       system: prompt.system,
@@ -98,11 +100,32 @@ export async function researchStep(ctx: ResearchContext, step: PlanStep): Promis
     };
     for (const hit of results) {
       if (hit.seen || candidates.has(hit.url)) continue;
+
+      // Filter: Auszuschließende Domains
+      const hitDomain = hit.domain.toLowerCase();
+      if (ctx.researchOptions?.excludeDomains?.some((ex) => hitDomain.includes(ex.toLowerCase()))) {
+        continue;
+      }
+
       const type = classifySource(hit.domain);
-      const score =
+      let score =
         0.5 * reputationScore(hit.domain) +
         0.3 * recencyScore(hit.publishedAt ?? null) +
         0.2 * (type === 'primary' ? 1 : type === 'secondary' ? 0.7 : 0.5);
+
+      // Priorität: Bevorzugte Domains
+      if (ctx.researchOptions?.focusDomains?.some((f) => hitDomain.includes(f.toLowerCase()))) {
+        score += 1.0;
+      }
+
+      // Zeithorizont-Bonus für aktuelle Quellen
+      if (ctx.researchOptions?.timeframe && ctx.researchOptions.timeframe !== 'all' && hit.publishedAt) {
+        const recency = recencyScore(hit.publishedAt);
+        if (ctx.researchOptions.timeframe === 'day' || ctx.researchOptions.timeframe === 'week') {
+          score += recency * 0.8;
+        }
+      }
+
       candidates.set(hit.url, {
         url: hit.url, title: hit.title, domain: hit.domain,
         ...(hit.publishedAt ? { publishedAt: hit.publishedAt } : {}),

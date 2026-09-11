@@ -38,8 +38,8 @@ const SETUP = {
     label: 'NVIDIA NIM',
     key: nvidiaKey,
     baseUrl: env.NVIDIA_BASE_URL || 'https://integrate.api.nvidia.com/v1',
-    fast: env.NVIDIA_MODEL_FAST || 'meta/llama-3.3-70b-instruct',
-    main: env.NVIDIA_MODEL_MAIN || 'meta/llama-3.3-70b-instruct',
+    fast: env.NVIDIA_MODEL_FAST || 'nvidia/nemotron-3.5-lightning-30b-a3b',
+    main: env.NVIDIA_MODEL_MAIN || 'nvidia/nemotron-3.5-lightning-30b-a3b',
     endpoint: 'chat',
   },
   compatible: {
@@ -54,8 +54,8 @@ const SETUP = {
     label: `Hermes-CLI → ${env.HERMES_PROVIDER || 'nvidia'}`,
     key: 'in-hermes',
     baseUrl: '(Zugangsdaten in ~/.hermes/.env)',
-    fast: env.HERMES_MODEL_FAST || 'meta/llama-3.3-70b-instruct',
-    main: env.HERMES_MODEL_MAIN || 'meta/llama-3.3-70b-instruct',
+    fast: env.HERMES_MODEL_FAST || 'nvidia/nemotron-3.5-lightning-30b-a3b',
+    main: env.HERMES_MODEL_MAIN || 'nvidia/nemotron-3.5-lightning-30b-a3b',
     endpoint: 'hermes',
   },
 };
@@ -79,7 +79,7 @@ console.log('');
 if (provider === 'hermes') {
   // Hermes hält die Zugangsdaten selbst; geprüft wird ein echter Aufruf.
   const { spawnSync } = await import('node:child_process');
-  const bin = env.HERMES_BIN || 'hermes';
+  const bin = env.HERMES_BIN || (existsSync(`${process.env.HOME}/.local/bin/hermes`) ? `${process.env.HOME}/.local/bin/hermes` : 'hermes');
   console.log(`Prüfe Hermes-Aufruf (${bin}) …`);
   const probe = spawnSync(
     bin,

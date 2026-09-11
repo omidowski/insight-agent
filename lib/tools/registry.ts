@@ -3,12 +3,13 @@ import type { ToolName } from '@/lib/contracts/domain';
 import type { ToolContext, ToolDefinition, ToolOutcome } from './types';
 import { calculatorTool, datetimeTool } from './utilities';
 import { extractContentTool, openUrlTool, searchInPageTool, webSearchTool } from './web';
+import { vectorSearchTool } from './vector-search';
 import { toStrictJsonSchema, type JsonSchema } from '@/lib/contracts/json-schema';
 import { appError, toAppError, withRetry } from '@/lib/util/errors';
 import { truncateToTokens } from '@/lib/util/tokens';
 
 const ALL_TOOLS: ToolDefinition<never, never>[] = [
-  webSearchTool, openUrlTool, extractContentTool, searchInPageTool, calculatorTool, datetimeTool,
+  webSearchTool, openUrlTool, extractContentTool, searchInPageTool, calculatorTool, datetimeTool, vectorSearchTool,
 ] as unknown as ToolDefinition<never, never>[];
 
 const BY_NAME = new Map<ToolName, ToolDefinition<never, never>>(
@@ -158,4 +159,4 @@ export function toolResultForModel(name: ToolName, outcome: ToolOutcome<unknown>
   return text;
 }
 
-export { ALL_TOOLS };
+export { ALL_TOOLS, vectorSearchTool };

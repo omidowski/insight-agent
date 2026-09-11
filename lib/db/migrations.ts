@@ -179,4 +179,32 @@ ALTER TABLE runs ADD COLUMN cancel_requested INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE runs ADD COLUMN model_override TEXT;
 `,
   },
+  {
+    name: '004_vector_entries',
+    sql: `
+CREATE TABLE IF NOT EXISTS vector_entries (
+  id TEXT PRIMARY KEY,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  parent_id TEXT,
+  content TEXT NOT NULL,
+  metadata_json TEXT NOT NULL,
+  embedding BLOB NOT NULL,
+  dimensions INTEGER NOT NULL,
+  model TEXT NOT NULL,
+  created_at TEXT NOT NULL,
+  updated_at TEXT NOT NULL,
+  UNIQUE(entity_type, entity_id)
+);
+CREATE INDEX IF NOT EXISTS idx_vector_entries_type ON vector_entries(entity_type);
+CREATE INDEX IF NOT EXISTS idx_vector_entries_parent ON vector_entries(parent_id);
+CREATE INDEX IF NOT EXISTS idx_vector_entries_created ON vector_entries(created_at);
+`,
+  },
+  {
+    name: '005_research_options',
+    sql: `
+ALTER TABLE runs ADD COLUMN research_options_json TEXT;
+`,
+  },
 ];

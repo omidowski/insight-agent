@@ -7,10 +7,11 @@ import { logger } from '@/lib/util/logger';
 import type {
   Citation, Conflict, ConflictEntry, Conversation, Message, MessageRole, MessageStatus,
   PlanStep, Run, RunBudgets, RunStatus, BudgetUsage, SourceRecord, SourceStatus, SourceType,
-  StepStatus, TaskType, ToolCallRecord, ExcerptRecord, UsageEvent,
+  StepStatus, TaskType, ToolCallRecord, ExcerptRecord, UsageEvent, ResearchOptions,
 } from '@/lib/contracts/domain';
 import type { AgentEvent, EventType } from '@/lib/contracts/events';
 import { isEventType } from '@/lib/contracts/events';
+import { getVectorStore, getVectorIndexer } from '@/lib/vector';
 
 function parseJson<T>(raw: string | null, fallback: T): T {
   if (!raw) return fallback;
@@ -25,6 +26,9 @@ function parseJson<T>(raw: string | null, fallback: T): T {
 export const LOCAL_USER_ID = 'usr_local';
 
 export function createRepositories(db: Db) {
+  const vectorStore = getVectorStore(db);
+  const vectorIndexer = getVectorIndexer(vectorStore);
+
   const users = {
     ensureLocal(): string {
       const existing = db.prepare('SELECT id FROM users WHERE id = ?').get(LOCAL_USER_ID);
@@ -33,6 +37,7 @@ export function createRepositories(db: Db) {
           LOCAL_USER_ID, null, 'Lokaler Nutzer', nowIso(),
         );
       }
+      vectorIndexer.indexStaticPrompts().catch(() => {});
       return LOCAL_USER_ID;
     },
   };
@@ -96,7 +101,11 @@ export function createRepositories(db: Db) {
       db.prepare(
         'INSERT INTO messages (id, conversation_id, role, content, status, run_id, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?)',
       ).run(id, conversationId, role, content, status, runId, ts, ts);
-      return { id, conversationId, role, content, status, runId, createdAt: ts, updatedAt: ts };
+      const msg: Message = { id, conversationId, role, content, status, runId, createdAt: ts, updatedAt: ts };
+      if (content.trim().length > 0) {
+        vectorIndexer.indexMessage(msg).catch(() => {});
+      }
+      return msg;
     },
     setContent(id: string, content: string, status?: MessageStatus): void {
       if (status) {
@@ -105,6 +114,10 @@ export function createRepositories(db: Db) {
       } else {
         db.prepare('UPDATE messages SET content = ?, updated_at = ? WHERE id = ?')
           .run(content, nowIso(), id);
+      }
+      if (status === 'complete' && content.trim().length > 0) {
+        const fullMsg = messages.get(id);
+        if (fullMsg) vectorIndexer.indexMessage(fullMsg).catch(() => {});
       }
     },
     get(id: string): Message | undefined {
@@ -157,6 +170,7 @@ export function createRepositories(db: Db) {
       updatedAt: r.updated_at as string,
       finishedAt: (r.finished_at as string | null) ?? null,
       modelOverride: (r.model_override as string | null) ?? null,
+      researchOptions: parseJson<ResearchOptions | null>((r.research_options_json as string | null) ?? null, null),
     };
   }
 
@@ -164,6 +178,7 @@ export function createRepositories(db: Db) {
     create(input: {
       conversationId: string; userId: string; requestMessageId: string;
       taskType: TaskType; budgets: RunBudgets; modelOverride?: string | null;
+      researchOptions?: ResearchOptions | null;
     }): Run {
       const id = newId('run');
       const ts = nowIso();
@@ -171,19 +186,21 @@ export function createRepositories(db: Db) {
         iterations: 0, searches: 0, sources: 0, toolCalls: 0,
         inputTokens: 0, outputTokens: 0, costMicroUsd: 0, startedAt: ts,
       };
+      const researchOptionsJson = input.researchOptions ? JSON.stringify(input.researchOptions) : null;
       db.prepare(
         `INSERT INTO runs (id, conversation_id, user_id, request_message_id, response_message_id, task_type,
           confidence, status, plan_json, current_step_id, budgets_json, usage_json, cost_micro_usd,
-          error_json, created_at, updated_at, finished_at, model_override)
-         VALUES (?,?,?,?,NULL,?,0,'idle',NULL,NULL,?,?,0,NULL,?,?,NULL,?)`,
+          error_json, created_at, updated_at, finished_at, model_override, research_options_json)
+         VALUES (?,?,?,?,NULL,?,0,'idle',NULL,NULL,?,?,0,NULL,?,?,NULL,?,?)`,
       ).run(id, input.conversationId, input.userId, input.requestMessageId, input.taskType,
-        JSON.stringify(input.budgets), JSON.stringify(usage), ts, ts, input.modelOverride ?? null);
+        JSON.stringify(input.budgets), JSON.stringify(usage), ts, ts, input.modelOverride ?? null, researchOptionsJson);
       return mapRun({
         id, conversation_id: input.conversationId, user_id: input.userId,
         request_message_id: input.requestMessageId, task_type: input.taskType,
         status: 'idle', budgets_json: JSON.stringify(input.budgets),
         usage_json: JSON.stringify(usage), created_at: ts, updated_at: ts,
         model_override: input.modelOverride ?? null,
+        research_options_json: researchOptionsJson,
       });
     },
     get(id: string): Run | undefined {
@@ -523,7 +540,32 @@ export function createRepositories(db: Db) {
     },
   };
 
-  return { db, users, conversations, messages, runs, steps, events, toolCalls, sources, excerpts, citations, conflicts, usage };
+  const vectors = {
+    store: vectorStore,
+    indexer: vectorIndexer,
+    search: vectorStore.search.bind(vectorStore),
+    stats: vectorStore.stats.bind(vectorStore),
+    count: vectorStore.count.bind(vectorStore),
+    syncAll: () =>
+      vectorIndexer.syncAll({
+        db,
+        users,
+        conversations,
+        messages,
+        runs,
+        steps,
+        events,
+        toolCalls,
+        sources,
+        excerpts,
+        citations,
+        conflicts,
+        usage,
+        vectors: null as unknown as never,
+      }),
+  };
+
+  return { db, users, conversations, messages, runs, steps, events, toolCalls, sources, excerpts, citations, conflicts, usage, vectors };
 }
 
 export type Repositories = ReturnType<typeof createRepositories>;

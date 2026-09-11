@@ -1,6 +1,22 @@
 /** API-Request-/Response-Schemas und Modell-Ausgabeschemas (Spec 05, FR-05-03). */
 import { z } from 'zod';
-import { runModeSchema, taskTypeSchema } from './domain';
+import {
+  researchDepthSchema,
+  researchOutputFormatSchema,
+  researchTimeframeSchema,
+  runModeSchema,
+  taskTypeSchema,
+} from './domain';
+
+export const researchOptionsSchema = z.object({
+  depth: researchDepthSchema.optional(),
+  timeframe: researchTimeframeSchema.optional(),
+  focusDomains: z.array(z.string().min(1).max(100)).max(20).optional(),
+  excludeDomains: z.array(z.string().min(1).max(100)).max(20).optional(),
+  aspects: z.string().max(1000).optional(),
+  outputFormat: researchOutputFormatSchema.optional(),
+});
+export type ResearchOptionsInput = z.infer<typeof researchOptionsSchema>;
 
 export const createRunRequestSchema = z.object({
   conversationId: z.string().min(1).optional(),
@@ -8,6 +24,8 @@ export const createRunRequestSchema = z.object({
   mode: runModeSchema.optional().default('auto'),
   /** Optionale Modellwahl des Nutzers; leer = konfiguriertes Standardmodell. */
   model: z.string().min(1).max(120).optional(),
+  /** Optionale Recherche-Vorgaben des Nutzers. */
+  researchOptions: researchOptionsSchema.optional(),
 });
 export type CreateRunRequest = z.infer<typeof createRunRequestSchema>;
 

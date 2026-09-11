@@ -1,7 +1,7 @@
 /** Planerzeugung und Replanning (Spec 15). */
 import type { LLMProvider } from '@/lib/llm/provider';
 import type { AppConfig } from '@/lib/config/env';
-import type { PlanStep, TaskType } from '@/lib/contracts/domain';
+import type { PlanStep, ResearchOptions, TaskType } from '@/lib/contracts/domain';
 import { planOutputSchema } from '@/lib/contracts/schemas';
 import { plannerPrompt } from './prompts';
 import { newId } from '@/lib/util/id';
@@ -26,8 +26,9 @@ export async function createPlan(args: {
   config: AppConfig;
   signal?: AbortSignal;
   runId?: string;
+  options?: ResearchOptions;
 }): Promise<PlanStep[]> {
-  const prompt = plannerPrompt(args.request, args.taskType, args.context);
+  const prompt = plannerPrompt(args.request, args.taskType, args.context, args.options);
   let steps: PlanStep[];
   try {
     const output = await args.llm.generateObject({

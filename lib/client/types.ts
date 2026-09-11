@@ -1,5 +1,5 @@
-/** Client-seitige Sichten auf API-Daten. */
-import type { Citation, Conversation, Message, RunStatus, SourceRecord } from '@/lib/contracts/domain';
+import type { Citation, Conversation, Message, ResearchOptions, RunStatus, SourceRecord } from '@/lib/contracts/domain';
+export type { ResearchOptions };
 
 export interface ConversationSummary extends Conversation {
   messageCount: number;
@@ -8,6 +8,7 @@ export interface ConversationSummary extends Conversation {
 
 export interface MessageView extends Message {
   citations: Citation[];
+  researchOptions?: ResearchOptions;
 }
 
 export interface ConversationDetail {
@@ -17,4 +18,12 @@ export interface ConversationDetail {
   lastRun: { id: string; status: RunStatus } | null;
 }
 
-export type Mode = 'auto' | 'chat' | 'research';
+export type Mode =
+  | 'auto'
+  | 'chat'
+  | 'research'
+  | 'deep_research'
+  | 'web_lookup'
+  | 'comparison'
+  | 'data_analysis'
+  | 'report_generation';

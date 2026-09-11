@@ -33,7 +33,7 @@ function renderWithMarkers(
           key={`${key}-${index++}`}
           type="button"
           onClick={() => onCitationClick(marker)}
-          className="mx-0.5 inline-flex h-[1.15em] min-w-[1.35em] items-center justify-center rounded border border-border bg-bg px-1 align-baseline text-[0.72em] font-medium text-accent hover:bg-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-accent"
+          className="citation-badge mx-0.5 inline-flex h-[1.25em] min-w-[1.45em] items-center justify-center rounded-md border border-accent/40 bg-accent/10 px-1.5 align-baseline text-[0.74em] font-semibold text-accent hover:border-accent hover:bg-accent hover:text-white focus:outline-none focus:ring-2 focus:ring-accent"
           aria-label={`Quelle ${marker} anzeigen`}
         >
           {marker}

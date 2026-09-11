@@ -17,7 +17,9 @@
     "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run test:smoke",
     "test:smoke": "vitest run --config vitest.smoke.config.ts",
     "check:llm": "node scripts/check-llm.mjs",
-    "set-key": "node scripts/set-key.mjs"
+    "set-key": "node scripts/set-key.mjs",
+    "eval": "node scripts/eval.mjs",
+    "vector:sync": "node scripts/sync-vector-db.mjs"
   },
   "dependencies": {
     "next": "^15.5.0",

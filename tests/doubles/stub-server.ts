@@ -59,6 +59,123 @@ export interface StubServer {
   close: () => Promise<void>;
 }
 
+export async function handleStubRequest(
+  url: URL,
+  method: string,
+  payload: Record<string, unknown> = {},
+  origin = 'http://127.0.0.1',
+  fake = new FakeLLMProvider(),
+): Promise<Response> {
+  const normMethod = method.toUpperCase();
+  if (normMethod === 'GET' && url.pathname === '/v1/models') {
+    return new Response(JSON.stringify({ data: MODELS.map((id) => ({ id, object: 'model' })) }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  if (normMethod === 'GET' && url.pathname.startsWith('/pages/')) {
+    const page = findTestPage(url.pathname.slice('/pages/'.length));
+    if (!page) {
+      return new Response('not found', { status: 404, headers: { 'Content-Type': 'text/plain' } });
+    }
+    return new Response(page.html, { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } });
+  }
+
+  if (url.pathname === '/robots.txt') {
+    return new Response('User-agent: *\nAllow: /\n', {
+      status: 200,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+
+  if (normMethod === 'POST' && url.pathname === '/search') {
+    const query = String(payload.query ?? '').toLowerCase();
+    const terms = query.split(/[^\p{L}\p{N}]+/u).filter((t) => t.length >= 4);
+    const hits = TEST_PAGES
+      .filter((p) => p.slug !== 'injection-trap')
+      .map((page) => ({
+        page,
+        score: terms.reduce(
+          (n, term) => n + (page.keywords.some((k) => k.startsWith(term) || term.startsWith(k)) ? 1 : 0),
+          0,
+        ),
+      }))
+      .filter((x) => x.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, Number(payload.max_results ?? 8));
+
+    return new Response(
+      JSON.stringify({
+        results: hits.map((h) => ({
+          title: h.page.title,
+          url: testPageUrl(h.page.slug, origin),
+          content: h.page.snippet,
+          published_date: h.page.publishedAt,
+        })),
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  if (normMethod === 'POST' && url.pathname === '/v1/chat/completions') {
+    const messages = (payload.messages ?? []) as { role: string; content: string }[];
+    const system = messages.find((m) => m.role === 'system')?.content ?? '';
+    const user = messages.find((m) => m.role === 'user')?.content ?? '';
+    const purpose = purposeOf(system);
+    const input = parseInput(user);
+
+    let content: string;
+    if (payload.response_format) {
+      const object = await fake.generateObjectRaw(purpose, input);
+      content = JSON.stringify(object);
+    } else {
+      content = await fake.generateRawText(purpose, input);
+    }
+
+    if (payload.stream) {
+      const encoder = new TextEncoder();
+      const stream = new ReadableStream<Uint8Array>({
+        start(controller) {
+          for (let i = 0; i < content.length; i += 40) {
+            controller.enqueue(
+              encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: content.slice(i, i + 40) } }] })}\n\n`),
+            );
+          }
+          controller.enqueue(
+            encoder.encode(
+              `data: ${JSON.stringify({ choices: [{ delta: {} }], usage: { prompt_tokens: 10, completion_tokens: 20 } })}\n\n`,
+            ),
+          );
+          controller.enqueue(encoder.encode('data: [DONE]\n\n'));
+          controller.close();
+        },
+      });
+      return new Response(stream, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        },
+      });
+    }
+
+    return new Response(
+      JSON.stringify({
+        choices: [{ message: { role: 'assistant', content }, finish_reason: 'stop' }],
+        usage: { prompt_tokens: 10, completion_tokens: 20 },
+      }),
+      { status: 200, headers: { 'Content-Type': 'application/json' } },
+    );
+  }
+
+  return new Response(JSON.stringify({ error: { message: `unbekannter Pfad ${url.pathname}` } }), {
+    status: 404,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
 export async function startStubServer(port = 0): Promise<StubServer> {
   const fake = new FakeLLMProvider();
   const requests: { path: string; model?: string }[] = [];

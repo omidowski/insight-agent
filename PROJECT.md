@@ -37,7 +37,7 @@ Ship a production-grade research agent that:
 | Tools | `lib/tools/` — registry, executor, web search/read |
 | LLM | OpenAI + OpenAI-compatible (`LLM_BASE_URL`) |
 | Search | OpenAI hosted web search, Brave, Tavily |
-| DB | `node:sqlite` behind repositories |
+| DB | `node:sqlite` behind repositories + Vector DB (`lib/vector/`) |
 | Specs | `specs/` (binding product specs) |
 | AI CLI | `.cursor/` brain · tickets · features · workunits · ADRs |
 
@@ -49,6 +49,7 @@ Ship a production-grade research agent that:
 | `components/` | Presentational UI |
 | `lib/agent/` | Router, planner, orchestrator, research |
 | `lib/tools/` | Tool registry + web tools |
+| `lib/vector/` | Vector DB, cosine search, embeddings, indexer |
 | `lib/llm/` `lib/search/` | Provider adapters |
 | `lib/db/` | SQLite + repositories |
 | `lib/contracts/` | Zod schemas, events, errors |
@@ -58,7 +59,7 @@ Ship a production-grade research agent that:
 
 ## Current state
 
-- **MVP done**: chat, routing, research loop, citations, conflicts, SSE, cancel, model picker, dual providers.
+- **MVP done**: chat, routing, research loop, citations, conflicts, SSE, cancel, model picker, dual providers, Vector DB over all prompts & data.
 - **Open (V1/V2 per specs)**: auth, document upload/RAG, reports, code execution, durable jobs, export/share, eval harness.
 - **Now**: rewrite/enhance research capabilities with AI CLI governance (100 features + ticket pool + PM agents).
 

@@ -78,8 +78,25 @@ export async function fetchPage(rawUrl: string, signal?: AbortSignal): Promise<F
           'Accept-Language': 'de,en;q=0.8',
         },
         signal: combined,
-      }).catch((err: Error) => {
+      }).catch(async (err: Error) => {
         if (signal?.aborted) throw new AppErrorException(appError('RUN_CANCELLED', 'aborted'));
+        if (allowLoopback && (url.hostname === '127.0.0.1' || url.hostname === 'localhost')) {
+          const match = /^\/pages\/([a-z0-9-]+)$/.exec(url.pathname);
+          if (match && match[1]) {
+            try {
+              const { findTestPage } = await import('@/tests/doubles/pages');
+              const page = findTestPage(match[1]);
+              if (page) {
+                return new Response(page.html, {
+                  status: 200,
+                  headers: { 'Content-Type': 'text/html; charset=utf-8' },
+                });
+              }
+            } catch {
+              /* ignore and fall through */
+            }
+          }
+        }
         throw new AppErrorException(appError('FETCH_FAILED', `${err.name}: ${err.message.slice(0, 120)}`));
       }),
       signal,

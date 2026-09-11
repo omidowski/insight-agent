@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
 import { withApi, parseBody, notFound } from '@/lib/api/handler';
 import { createRunRequestSchema } from '@/lib/contracts/schemas';
+import type { TaskType } from '@/lib/contracts/domain';
 import { budgetsFor } from '@/lib/agent/paths';
 import { executeRun } from '@/lib/agent/orchestrator';
+import { resolveConversationTitle } from '@/lib/agent/title';
 import { logger } from '@/lib/util/logger';
 
 export const runtime = 'nodejs';
@@ -16,17 +18,30 @@ export async function POST(request: Request) {
       const text = body.message.trim();
       if (text.length === 0) throw notFound('Nachricht');
 
+      const provisionalTitle = resolveConversationTitle(text, '');
       const conversation = body.conversationId
         ? ctx.repos.conversations.get(body.conversationId, ctx.userId)
-        : ctx.repos.conversations.create(ctx.userId);
+        : ctx.repos.conversations.create(ctx.userId, provisionalTitle);
       if (!conversation) throw notFound('Conversation');
 
       const userMessage = ctx.repos.messages.create(conversation.id, 'user', text, 'complete');
       ctx.repos.conversations.touch(conversation.id);
 
       // Budgets vorläufig aus dem angeforderten Modus; der Router verfeinert den Task-Typ im Run.
-      const provisionalType =
-        body.mode === 'chat' ? 'knowledge_question' : body.mode === 'research' ? 'deep_research' : 'deep_research';
+      let provisionalType: TaskType = 'deep_research';
+      if (body.mode === 'chat') {
+        provisionalType = 'knowledge_question';
+      } else if (body.mode === 'web_lookup') {
+        provisionalType = 'web_lookup';
+      } else if (body.mode === 'comparison') {
+        provisionalType = 'comparison';
+      } else if (body.mode === 'data_analysis') {
+        provisionalType = 'data_analysis';
+      } else if (body.mode === 'report_generation') {
+        provisionalType = 'report_generation';
+      } else {
+        provisionalType = 'deep_research';
+      }
       const run = ctx.repos.runs.create({
         conversationId: conversation.id,
         userId: ctx.userId,
@@ -34,10 +49,11 @@ export async function POST(request: Request) {
         taskType: provisionalType,
         budgets: budgetsFor(provisionalType, ctx.config),
         modelOverride: body.model ?? null,
+        researchOptions: body.researchOptions ?? null,
       });
 
       // Ausführung asynchron starten (ADR-006)
-      void executeRun({ runId: run.id, mode: body.mode ?? 'auto' }).catch((err: unknown) => {
+      void executeRun({ runId: run.id, mode: body.mode ?? 'auto', researchOptions: body.researchOptions }).catch((err: unknown) => {
         logger.error('run execution crashed', { module: 'api', runId: run.id, error: String(err).slice(0, 300) });
       });
 

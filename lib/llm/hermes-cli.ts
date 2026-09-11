@@ -12,6 +12,9 @@
  * - Structured Outputs entstehen über Schema-Anweisung im Prompt plus Reparaturversuch.
  */
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join } from 'node:path';
 import type { z } from 'zod';
 import type { LLMProvider, ObjectRequest, TextRequest, TextResult, UsageSink } from './provider';
 import { getConfig } from '@/lib/config/env';
@@ -63,9 +66,17 @@ export class HermesCliProvider implements LLMProvider {
     if (model) args.push('-m', model);
     if (config.HERMES_PROVIDER) args.push('--provider', config.HERMES_PROVIDER);
 
+    let bin = config.HERMES_BIN;
+    if (bin === 'hermes') {
+      const localBin = join(homedir(), '.local', 'bin', 'hermes');
+      if (existsSync(localBin)) bin = localBin;
+    }
+
     return new Promise<HermesResult>((resolve, reject) => {
-      const child = spawn(config.HERMES_BIN, args, {
-        env: { ...process.env, NO_COLOR: '1', TERM: 'dumb' },
+      const userLocalBin = join(homedir(), '.local', 'bin');
+      const customPath = process.env.PATH ? `${userLocalBin}:${process.env.PATH}` : `${userLocalBin}:/usr/local/bin:/usr/bin:/bin`;
+      const child = spawn(bin, args, {
+        env: { ...process.env, PATH: customPath, NO_COLOR: '1', TERM: 'dumb' },
         stdio: ['ignore', 'pipe', 'pipe'],
       });
 

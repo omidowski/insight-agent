@@ -1,4 +1,5 @@
 /** Typisierte Client-Aufrufe gegen die API (Spec 08). */
+import type { ResearchOptions } from '@/lib/contracts/domain';
 import type { ConversationDetail, ConversationSummary, Mode } from './types';
 import type { AgentEvent } from '@/lib/contracts/events';
 import type { Citation, Conflict, Message, RunStatus, SourceRecord, ExcerptRecord } from '@/lib/contracts/domain';
@@ -35,13 +36,20 @@ export const api = {
       currentFast: string | null;
       currentMain: string | null;
     }>('/api/models'),
-  createRun: (message: string, conversationId: string | null, mode: Mode, model?: string) =>
+  createRun: (
+    message: string,
+    conversationId: string | null,
+    mode: Mode,
+    model?: string,
+    researchOptions?: ResearchOptions,
+  ) =>
     request<{ runId: string; conversationId: string; userMessageId: string }>('/api/runs', {
       method: 'POST',
       body: JSON.stringify({
         message, mode,
         ...(conversationId ? { conversationId } : {}),
         ...(model ? { model } : {}),
+        ...(researchOptions ? { researchOptions } : {}),
       }),
     }),
   cancelRun: (runId: string) => request<unknown>(`/api/runs/${runId}/cancel`, { method: 'POST' }),
@@ -54,6 +62,45 @@ export const api = {
       message: Message | null;
       citations: Citation[];
     }>(`/api/runs/${runId}`),
+  vectorSearch: (query: string, options?: { types?: string[]; limit?: number; minSimilarity?: number }) => {
+    const params = new URLSearchParams({ q: query });
+    if (options?.types && options.types.length > 0) params.set('types', options.types.join(','));
+    if (options?.limit) params.set('limit', String(options.limit));
+    if (options?.minSimilarity) params.set('minSimilarity', String(options.minSimilarity));
+    return request<{
+      ok: boolean;
+      query: string;
+      total: number;
+      results: Array<{
+        id: string;
+        entityType: string;
+        entityId: string;
+        parentId: string | null;
+        content: string;
+        metadata: Record<string, unknown>;
+        similarity: number;
+        createdAt: string;
+      }>;
+    }>(`/api/vector/search?${params.toString()}`);
+  },
+  getVectorStats: () =>
+    request<{
+      ok: boolean;
+      stats: {
+        total: number;
+        byType: Record<string, number>;
+        dimensions: number;
+        model: string;
+        lastUpdatedAt: string | null;
+      };
+    }>('/api/vector/stats'),
+  syncVectorDb: () =>
+    request<{
+      ok: boolean;
+      indexed: number;
+      byType: Record<string, number>;
+      durationMs: number;
+    }>('/api/vector/sync', { method: 'POST' }),
 };
 
 export type StreamHandlers = {

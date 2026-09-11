@@ -44,7 +44,7 @@ Weitere Dokumente: [DECISIONS.md](DECISIONS.md) (ADRs) · [OPEN-QUESTIONS.md](OP
 | 19 | Web Search Tool | MVP | 4 | SearchProvider-Abstraktion, Query-Generierung, Ergebnis-Normalisierung, Dedup. |
 | 20 | Web Content Reader | MVP | 4 | Sicheres Abrufen und Extrahieren von Seiteninhalten inkl. SSRF-Guard. |
 | 21 | Tool Utilities | MVP | 4 | Calculator und Date/Time als deterministische Hilfstools. |
-| 22 | File Search & Retrieval | V2 | 7 | Embeddings/Vector Store für Dokumentenrecherche. |
+| 22 | File Search & Retrieval | MVP | 4 | Embeddings/Vector Store für Prompts, generierte Daten & Dokumentenrecherche. |
 | 23 | Code Execution Tool | V2 | 7 | Sandboxed Python/JS-Ausführung für Datenanalyse. |
 | 24 | Research Engine | MVP | 4 | Orchestrierung einer Recherche: Suche → Auswahl → Lesen → Extraktion → Synthese. |
 | 25 | Deep Research Loop | MVP | 4 | Iterative Nachrecherche, Sättigungserkennung, Budgets, Abbruchbedingungen. |

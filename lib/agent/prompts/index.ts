@@ -43,32 +43,79 @@ export const routerPrompt = (request: string, history: string[]): Prompt => ({
   ],
 });
 
-export const plannerPrompt = (request: string, taskType: string, context: string[]): Prompt => ({
-  version: 'v1',
-  system: systemBase(
-    'Du zerlegst eine Rechercheaufgabe in 2 bis 8 eigenständig beantwortbare Teilfragen. ' +
-      'Jede Teilfrage ist ohne Kenntnis der anderen verständlich, enthält also alle nötigen Bezüge. ' +
-      'dependsOn enthält die Indizes (0-basiert) vorheriger Schritte, deren Ergebnisse zwingend nötig sind — sonst leer.',
-  ),
-  input: [
-    dataBlock('AUFGABENTYP', taskType),
-    ...(context.length > 0 ? [dataBlock('CONTEXT', context.join('\n'))] : []),
-    { role: 'user', text: request },
-  ],
-});
+import type { ResearchOptions } from '@/lib/contracts/domain';
 
-export const queryGenPrompt = (question: string, previousQueries: string[]): Prompt => ({
-  version: 'v1',
-  system: systemBase(
-    'Du formulierst präzise Websuchanfragen zu einer Teilfrage. Nutze konkrete Begriffe, ergänze Jahreszahlen, ' +
-      'wenn Aktualität relevant ist. Erzeuge 1 bis 3 Anfragen, die sich deutlich voneinander unterscheiden. ' +
-      'Verwende keine Anfragen, die bereits gestellt wurden.',
-  ),
-  input: [
-    ...(previousQueries.length > 0 ? [dataBlock('BEREITS_GESTELLT', previousQueries.join('\n'))] : []),
-    { role: 'user', text: question },
-  ],
-});
+function timeframeLabel(timeframe?: string): string {
+  switch (timeframe) {
+    case 'day': return 'letzte 24 Stunden';
+    case 'week': return 'letzte 7 Tage';
+    case 'month': return 'letzter Monat (30 Tage)';
+    case 'year': return 'letztes Jahr';
+    default: return '';
+  }
+}
+
+export const plannerPrompt = (
+  request: string,
+  taskType: string,
+  context: string[],
+  options?: ResearchOptions,
+): Prompt => {
+  const tf = timeframeLabel(options?.timeframe);
+  const extraSystem = [
+    options?.aspects ? 'Berücksichtige die vom Nutzer vorgegebenen Fokus-Aspekte zwingend als Schritte im Plan.' : '',
+    tf ? `Beachte den geforderten Zeithorizont (${tf}) bei den Fragen.` : '',
+  ].filter(Boolean).join(' ');
+
+  return {
+    version: 'v2',
+    system: systemBase(
+      'Du zerlegst eine Rechercheaufgabe in 2 bis 8 eigenständig beantwortbare Teilfragen. ' +
+        'Jede Teilfrage ist ohne Kenntnis der anderen verständlich, enthält also alle nötigen Bezüge. ' +
+        'dependsOn enthält die Indizes (0-basiert) vorheriger Schritte, deren Ergebnisse zwingend nötig sind — sonst leer.' +
+        (extraSystem ? `\n${extraSystem}` : ''),
+    ),
+    input: [
+      dataBlock('AUFGABENTYP', taskType),
+      ...(context.length > 0 ? [dataBlock('CONTEXT', context.join('\n'))] : []),
+      ...(options?.aspects ? [dataBlock('FOKUS_ASPEKTE', options.aspects)] : []),
+      ...(tf ? [dataBlock('ZEITRAUM', tf)] : []),
+      { role: 'user', text: request },
+    ],
+  };
+};
+
+export const queryGenPrompt = (
+  question: string,
+  previousQueries: string[],
+  options?: ResearchOptions,
+): Prompt => {
+  const tf = timeframeLabel(options?.timeframe);
+  const extraSystem = [
+    tf ? `Beachte den Zeithorizont (${tf}) und ergänze bei Bedarf Jahreszahlen oder Aktualitätsbegriffe.` : '',
+    options?.focusDomains && options.focusDomains.length > 0
+      ? `Bevorzuge wenn sinnvoll Suchen auf diesen Quellen: ${options.focusDomains.join(', ')}.`
+      : '',
+  ].filter(Boolean).join(' ');
+
+  return {
+    version: 'v2',
+    system: systemBase(
+      'Du formulierst präzise Websuchanfragen zu einer Teilfrage. Nutze konkrete Begriffe, ergänze Jahreszahlen, ' +
+        'wenn Aktualität relevant ist. Erzeuge 1 bis 3 Anfragen, die sich deutlich voneinander unterscheiden. ' +
+        'Verwende keine Anfragen, die bereits gestellt wurden.' +
+        (extraSystem ? `\n${extraSystem}` : ''),
+    ),
+    input: [
+      ...(previousQueries.length > 0 ? [dataBlock('BEREITS_GESTELLT', previousQueries.join('\n'))] : []),
+      ...(tf ? [dataBlock('ZEITRAUM', tf)] : []),
+      ...(options?.focusDomains && options.focusDomains.length > 0
+        ? [dataBlock('BEVORZUGTE_QUELLEN', options.focusDomains.join(', '))]
+        : []),
+      { role: 'user', text: question },
+    ],
+  };
+};
 
 export const extractionPrompt = (question: string, index: number, domain: string, fetchedAt: string | null, content: string): Prompt => ({
   version: 'v1',
@@ -90,31 +137,48 @@ export const synthesisPrompt = (args: {
   sources: { index: number; domain: string; fetchedAt: string | null; content: string }[];
   conflicts: string;
   gaps: string;
-}): Prompt => ({
-  version: 'v1',
-  system: systemBase(
-    'Du schreibst die Endantwort einer Recherche. Regeln:\n' +
-      '1. Jede faktische Aussage endet mit einem Quellenmarker in eckigen Klammern, z. B. [2].\n' +
-      '2. Verwende ausschließlich Angaben aus den SOURCE-Blöcken. Erfinde nichts und rate nicht.\n' +
-      '3. Widersprüchliche Werte nennst du beide mit ihren Markern; du bildest niemals einen Mittelwert.\n' +
-      '4. Fehlende Informationen führst du am Ende unter der Überschrift "Offene Punkte" auf.\n' +
-      '5. Struktur: kurze Antwort zuerst, dann Details, bei Vergleichen eine Markdown-Tabelle.\n' +
-      '6. Kein Vorwort über dich selbst, keine Wiederholung der Frage.',
-  ),
-  input: [
-    ...args.sources.map((s) => sourceBlock(s.index, s.domain, s.fetchedAt, s.content)),
-    ...(args.conflicts ? [dataBlock('CONFLICTS', args.conflicts)] : []),
-    ...(args.gaps ? [dataBlock('GAPS', args.gaps)] : []),
-    ...(args.plan.length > 0 ? [dataBlock('PLAN', args.plan.join('\n'))] : []),
-    { role: 'user', text: args.request },
-  ],
-});
+  options?: ResearchOptions;
+}): Prompt => {
+  const formatRules = args.options?.outputFormat === 'detailed_report'
+    ? '5. Struktur: Schreibe einen ausführlichen Recherchebericht mit Executive Summary, klar gegliederten Abschnitten (##) und Fazit.'
+    : args.options?.outputFormat === 'comparison_table'
+    ? '5. Struktur: Stelle die Ergebnisse und Kernvergleiche in einer übersichtlichen Markdown-Tabelle mit klaren Spalten dar.'
+    : args.options?.outputFormat === 'bullet_points'
+    ? '5. Struktur: Fasse die Kernaussagen in prägnanten, übersichtlichen Stichpunkten (Bullet Points) mit Quellenbelegen zusammen.'
+    : '5. Struktur: kurze Antwort zuerst, dann Details, bei Vergleichen eine Markdown-Tabelle.';
+
+  const tf = timeframeLabel(args.options?.timeframe);
+
+  return {
+    version: 'v2',
+    system: systemBase(
+      'Du schreibst die Endantwort einer Recherche. Regeln:\n' +
+        '1. Jede faktische Aussage endet mit einem Quellenmarker in eckigen Klammern, z. B. [2].\n' +
+        '2. Verwende ausschließlich Angaben aus den SOURCE-Blöcken. Erfinde nichts und rate nicht.\n' +
+        '3. Widersprüchliche Werte nennst du beide mit ihren Markern; du bildest niemals einen Mittelwert.\n' +
+        '4. Fehlende Informationen führst du am Ende unter der Überschrift "Offene Punkte" auf.\n' +
+        `${formatRules}\n` +
+        '6. Kein Vorwort über dich selbst, keine Wiederholung der Frage.' +
+        (args.options?.aspects ? '\n7. Gehe gezielt auf die gewünschten Schwerpunkte und Leitfragen ein.' : ''),
+    ),
+    input: [
+      ...args.sources.map((s) => sourceBlock(s.index, s.domain, s.fetchedAt, s.content)),
+      ...(args.conflicts ? [dataBlock('CONFLICTS', args.conflicts)] : []),
+      ...(args.gaps ? [dataBlock('GAPS', args.gaps)] : []),
+      ...(args.plan.length > 0 ? [dataBlock('PLAN', args.plan.join('\n'))] : []),
+      ...(args.options?.aspects ? [dataBlock('GEWÜNSCHTE_SCHWERPUNKTE', args.options.aspects)] : []),
+      ...(tf ? [dataBlock('ZEITRAUM', tf)] : []),
+      { role: 'user', text: args.request },
+    ],
+  };
+};
 
 export const conversationPrompt = (request: string, history: { role: 'user' | 'assistant'; text: string }[]): Prompt => ({
   version: 'v1',
   system: systemBase(
     'Du bist ein hilfsbereiter Assistent mit Rechercheschwerpunkt. Antworte knapp, sachlich und freundlich. ' +
       'Wenn eine Frage aktuelle Daten oder Belege erfordert, weise darauf hin, dass du eine Recherche starten kannst. ' +
+      'Frage bei Begrüßungen, unklaren Anfragen oder zu Beginn eines Gesprächs immer zuerst gezielt nach, was der Nutzer suchen (Web-Recherche mit belegten Quellen) oder sagen (direktes Gespräch/Erklärung) möchte. ' +
       'Du hast in diesem Modus KEINE Quellen abgerufen. Erfinde niemals Quellen, Messwerte, Zitate oder ' +
       'Domainnamen und gib nichts als belegt aus. Wenn du eine tagesaktuelle Angabe nicht kennst, sage das ' +
       'und biete eine Recherche an, statt einen Wert zu nennen.',

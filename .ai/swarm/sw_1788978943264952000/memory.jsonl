@@ -1,0 +1,7 @@
+{"at":"2026-09-09T18:35:43.265741Z","agent":"orchestrator","kind":"boot","text":"swarm created: Continue work unit \"insight-agent-improve-pass\". Open automated tickets (skip human_gate): IAIP-0101 (planned), IAIP-0201 (planned), IAIP-0301 (planned), IAIP-0401 (planned).\n\nClaim ONE unfinished non-overlapping ticket; TDD; reversible only; only Cursor agent,\nCodex, or Claude. Update that ticket status when done. No credentials, deletions,\ngit topology changes, commits, or human-gate tickets (e.g. URM-1001)."}
+{"at":"2026-09-09T18:35:43.266571Z","agent":"orchestrator","kind":"ticket_error","text":"connect to plat.ai platform at http://127.0.0.1:4100/api/v1: Post \"http://127.0.0.1:4100/api/v1/tickets\": dial tcp 127.0.0.1:4100: connect: connection refused"}
+{"at":"2026-09-09T18:35:43.266957Z","agent":"orchestrator","kind":"ticket_error","text":"connect to plat.ai platform at http://127.0.0.1:4100/api/v1: Post \"http://127.0.0.1:4100/api/v1/tickets\": dial tcp 127.0.0.1:4100: connect: connection refused"}
+{"at":"2026-09-09T18:35:43.267355Z","agent":"orchestrator","kind":"ticket_error","text":"connect to plat.ai platform at http://127.0.0.1:4100/api/v1: Post \"http://127.0.0.1:4100/api/v1/tickets\": dial tcp 127.0.0.1:4100: connect: connection refused"}
+{"at":"2026-09-09T18:35:43.276207Z","agent":"w1","kind":"spawn","text":"started pid=84643"}
+{"at":"2026-09-09T18:35:43.283947Z","agent":"w2","kind":"spawn","text":"started pid=84646"}
+{"at":"2026-09-09T18:35:43.288641Z","agent":"w3","kind":"spawn","text":"started pid=84648"}
